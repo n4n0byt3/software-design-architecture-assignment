@@ -14,8 +14,13 @@ public class PlayGameUseCase {
         this.out = out;
     }
 
+    /**
+     * @param singleDie      true = 1xD6, false = 2xD6
+     * @param exactEnd       true = must land exactly on END or forfeit
+     * @param forfeitOnHit   true = stay put if landing square is occupied
+     */
     public void execute(boolean singleDie, boolean exactEnd, boolean forfeitOnHit) {
-        Game game = factory.create2P(singleDie, exactEnd, forfeitOnHit);
+        Game game = factory.createGame(singleDie, exactEnd, forfeitOnHit);
 
         if (out instanceof ConsoleOutputAdapter coa) {
             coa.setBoard(game.getBoard());

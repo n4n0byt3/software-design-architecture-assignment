@@ -29,7 +29,7 @@ public class ConsoleOutputAdapter implements OutputPort {
 
     @Override
     public void printWinner(String player, int totalTurns, int winnerTurns) {
-        System.out.printf("%n%s wins in %d turns!%nTotal turns %d%n", player, winnerTurns, totalTurns);
+        System.out.printf("%n%s wins in %d moves!%nTotal plays %d%n", player, winnerTurns, totalTurns);
     }
 
     @Override

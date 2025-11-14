@@ -1,7 +1,5 @@
 package uk.ac.mmu.game.domain;
 
-import java.util.List;
-
 public class InPlayState implements GameState {
 
     @Override
