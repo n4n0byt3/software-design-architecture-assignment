@@ -6,8 +6,47 @@ import java.util.Optional;
 
 /**
  * Core domain object representing a single game session.
- * It coordinates players, board, rules and dice and delegates
- * turn logic to a GameState implementation (Ready/InPlay/GameOver).
+ *
+ * It coordinates:
+ *  - the {@link Board}
+ *  - the {@link Player}s (via {@link TurnOrder})
+ *  - {@link Rules} for move validation and special behaviour (Decorators)
+ *  - {@link DiceShaker} strategies
+ *
+ * === Lifecycle State Machine (Week 7) ===
+ *
+ * The Game has a discrete lifecycle described by the GameStates model:
+ *
+ *   States:
+ *     - ReadyToPlay (initial)
+ *     - InPlay
+ *     - GameOver (terminal)
+ *
+ *   Example state transitions:
+ *     ReadyToPlay --turn--> InPlay
+ *     InPlay      --turn--> InPlay  (while no winner)
+ *     InPlay      --turn--> GameOver (when a winning move is played)
+ *
+ * Only one GameState is active at a time. The State pattern is used to
+ * implement this lifecycle:
+ *
+ *   - {@link ReadyState}     => "ReadyToPlay"
+ *   - {@link InPlayState}    => "InPlay"
+ *   - {@link GameOverState}  => "GameOver"
+ *
+ * === Observer Pattern (with ISP) ===
+ *
+ * Game also supports observers which are notified of:
+ *
+ *   - State transitions ({@link GameStateObserver})
+ *   - Turns being played ({@link PlayerTurnObserver})
+ *   - Game completion ({@link GameFinishedObserver})
+ *
+ * The composite {@link GameObserver} interface combines the three; this
+ * demonstrates the Interface Segregation Principle whilst still allowing
+ * a single object (e.g. the console adapter) to observe everything.
+ *
+ * This keeps side-effects such as printing/logging outside the core domain.
  */
 public class Game {
 
@@ -17,12 +56,13 @@ public class Game {
     private final DiceShaker dice;
     private final List<MoveResult> timeline = new ArrayList<>();
 
-    // --- State pattern ---
+    // --- State pattern: lifecycle state (ReadyToPlay, InPlay, GameOver) ---
     private GameState state = new ReadyState();
 
-    // Pending transition (for printing "Game state X -> Y")
-    private String pendingFrom;
-    private String pendingTo;
+    // --- Observer pattern (ISP: separate concerns) ---
+    private final List<GameStateObserver> stateObservers = new ArrayList<>();
+    private final List<PlayerTurnObserver> turnObservers = new ArrayList<>();
+    private final List<GameFinishedObserver> finishedObservers = new ArrayList<>();
 
     public Game(Board board, List<Player> players, Rules rules, DiceShaker dice) {
         if (board == null) throw new IllegalArgumentException("board is required");
@@ -64,41 +104,70 @@ public class Game {
         return dice;
     }
 
+    GameState getState() {
+        return state;
+    }
+
+    // --- Observer registration (ISP) ---
+
+    public void addStateObserver(GameStateObserver observer) {
+        if (observer != null) stateObservers.add(observer);
+    }
+
+    public void addTurnObserver(PlayerTurnObserver observer) {
+        if (observer != null) turnObservers.add(observer);
+    }
+
+    public void addFinishedObserver(GameFinishedObserver observer) {
+        if (observer != null) finishedObservers.add(observer);
+    }
+
+    /**
+     * Convenience method: register an observer for all events.
+     */
+    public void addObserver(GameObserver observer) {
+        if (observer == null) return;
+        addStateObserver(observer);
+        addTurnObserver(observer);
+        addFinishedObserver(observer);
+    }
+
+    public void removeStateObserver(GameStateObserver observer) {
+        stateObservers.remove(observer);
+    }
+
+    public void removeTurnObserver(PlayerTurnObserver observer) {
+        turnObservers.remove(observer);
+    }
+
+    public void removeFinishedObserver(GameFinishedObserver observer) {
+        finishedObservers.remove(observer);
+    }
+
     // --- State management ---
 
     /**
-     * Change the current game state and remember the transition
-     * so the UI can print it (Ready -> InPlay, InPlay -> GameOver).
+     * Change the current game state and notify state observers
+     * (e.g. ReadyToPlay -> InPlay, InPlay -> GameOver).
      */
     public void switchTo(GameState next) {
         if (next == null) throw new IllegalArgumentException("next state is required");
         String from = state.name();
         String to = next.name();
         this.state = next;
-        this.pendingFrom = from;
-        this.pendingTo = to;
         next.enter(this);
-    }
 
-    /**
-     * Called by the use case after each turn to retrieve (and clear)
-     * any state transition that happened.
-     *
-     * @return [from, to] or null if no transition pending.
-     */
-    public String[] drainTransition() {
-        if (pendingFrom == null) return null;
-        String[] t = new String[]{pendingFrom, pendingTo};
-        pendingFrom = null;
-        pendingTo = null;
-        return t;
+        // Notify observers of state change
+        for (GameStateObserver obs : stateObservers) {
+            obs.onStateChanged(this, from, to);
+        }
     }
 
     // --- Gameplay ---
 
     /**
      * Executes one logical turn by delegating to the current state.
-     * ReadyState will switch to InPlay on first call.
+     * ReadyState ("ReadyToPlay") will switch to InPlay on first call.
      */
     public MoveResult playTurn() {
         return state.playTurn(this);
@@ -129,6 +198,31 @@ public class Game {
         if (mr == null) throw new IllegalArgumentException("move result is required");
         timeline.add(mr);
         checkInvariants();
+    }
+
+    // --- Observer notifications used by states ---
+
+    /**
+     * Notify observers that a turn has been played.
+     */
+    void notifyTurnPlayed(Player current, MoveResult result) {
+        for (PlayerTurnObserver obs : turnObservers) {
+            obs.onTurnPlayed(this, result, current);
+        }
+    }
+
+    /**
+     * Notify observers that the game has finished.
+     */
+    void notifyGameFinished(Player winner) {
+        int totalTurns = turnOrder.all().stream()
+                .mapToInt(Player::getTurnsTaken)
+                .sum();
+        int winnerTurns = (winner != null ? winner.getTurnsTaken() : 0);
+
+        for (GameFinishedObserver obs : finishedObservers) {
+            obs.onGameFinished(this, winner, totalTurns, winnerTurns);
+        }
     }
 
     // --- Invariants ---

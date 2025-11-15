@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import uk.ac.mmu.game.usecase.*;
 import uk.ac.mmu.game.domain.*;
+import uk.ac.mmu.game.usecase.GameFacade;
 
 @Configuration
 public class SpringConfig {
@@ -21,7 +22,17 @@ public class SpringConfig {
     }
 
     @Bean
-    public PlayGameUseCase playGameUseCase(GameFactory f, OutputPort o) {
-        return new PlayGameUseCase(f, o);
+    public GameMediator gameMediator() {
+        return new SimpleConsoleMediator();
+    }
+
+    @Bean
+    public PlayGameUseCase playGameUseCase(GameFactory f, OutputPort o, GameMediator mediator) {
+        return new PlayGameUseCase(f, o, mediator);
+    }
+
+    @Bean
+    public GameFacade gameFacade(PlayGameUseCase playGameUseCase) {
+        return new GameFacade(playGameUseCase);
     }
 }

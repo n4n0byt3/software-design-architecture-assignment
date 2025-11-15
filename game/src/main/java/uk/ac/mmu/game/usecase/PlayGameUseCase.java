@@ -1,17 +1,30 @@
 package uk.ac.mmu.game.usecase;
 
 import uk.ac.mmu.game.domain.Game;
-import uk.ac.mmu.game.domain.MoveResult;
 import uk.ac.mmu.game.domain.Player;
-import uk.ac.mmu.game.infrastructure.ConsoleOutputAdapter;
 
+/**
+ * Application service (use case) that runs a complete game session.
+ *
+ * It depends only on abstractions:
+ *  - {@link GameFactory} to create a Game (policy over construction).
+ *  - {@link OutputPort} to present information (port).
+ *  - {@link GameMediator} to report high-level events (optional mediator).
+ *
+ * Concrete implementations (console adapter, specific factories, etc.)
+ * are provided by the DI container (Spring), satisfying the
+ * Dependency Inversion Principle and keeping this class framework-free.
+ */
 public class PlayGameUseCase {
+
     private final GameFactory factory;
     private final OutputPort out;
+    private final GameMediator mediator;
 
-    public PlayGameUseCase(GameFactory factory, OutputPort out) {
+    public PlayGameUseCase(GameFactory factory, OutputPort out, GameMediator mediator) {
         this.factory = factory;
         this.out = out;
+        this.mediator = mediator;
     }
 
     /**
@@ -20,44 +33,35 @@ public class PlayGameUseCase {
      * @param forfeitOnHit   true = stay put if landing square is occupied
      */
     public void execute(boolean singleDie, boolean exactEnd, boolean forfeitOnHit) {
+        // Create the game via the injected factory (no concrete coupling here).
         Game game = factory.createGame(singleDie, exactEnd, forfeitOnHit);
 
-        if (out instanceof ConsoleOutputAdapter coa) {
-            coa.setBoard(game.getBoard());
-        }
+        // Configure the presenter and register it as an observer.
+        // OutputPort extends GameObserver and exposes setBoard(...) as a port method.
+        out.setBoard(game.getBoard());
+        game.addObserver(out);
 
-        out.printConfig(String.format(
+        String cfg = String.format(
                 "Board positions=%d, Tail positions=%d, Players=%s, singleDie=%s, exactEnd=%s, forfeitOnHit=%s",
                 game.getBoard().mainSize(),
                 game.getBoard().tailSize(),
                 game.getPlayers().stream().map(Player::getName).toList(),
                 singleDie, exactEnd, forfeitOnHit
-        ));
+        );
 
+        out.printConfig(cfg);
+        mediator.event("Starting new game: " + cfg);
+
+        // Main loop: all side-effects (printing, logging) are now triggered
+        // by observers registered on the Game.
         while (!game.isOver()) {
-            // play a turn (Ready will transition to InPlay inside)
-            Player current = game.getTurnOrder().current();
-            MoveResult mr = game.playTurn();
-
-            // print any state transition that happened because of this call
-            String[] t = game.drainTransition();
-            if (t != null) out.printState(t[0], t[1]);
-
-            if ("Game over".equals(mr.note())) {
-                out.printGameOver();
-                break;
-            }
-            out.printTurn(mr, current.getTurnsTaken(), current);
-
-            // If InPlay -> GameOver happened after this turn, print that transition too
-            t = game.drainTransition();
-            if (t != null) out.printState(t[0], t[1]);
+            game.playTurn();
         }
 
-        Player winPlayer = game.winner().orElse(null);
-        String winnerName = (winPlayer != null ? winPlayer.getName() : "N/A");
-        int winnerTurns = (winPlayer != null ? winPlayer.getTurnsTaken() : 0);
-        int totalTurns = game.getPlayers().stream().mapToInt(Player::getTurnsTaken).sum();
-        out.printWinner(winnerName, totalTurns, winnerTurns);
+        // Winner summary is handled by observers; here we just log via the mediator.
+        game.winner().ifPresentOrElse(
+                w -> mediator.event("Game finished, winner: " + w.getName()),
+                () -> mediator.event("Game finished, no winner.")
+        );
     }
 }
