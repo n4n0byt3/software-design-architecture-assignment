@@ -1,7 +1,5 @@
 package uk.ac.mmu.game.domain;
 
-import java.util.List;
-
 public class InPlayState implements GameState {
 
     @Override
@@ -16,8 +14,13 @@ public class InPlayState implements GameState {
         MoveResult res = game.getRules().apply(game.getBoard(), current, roll, game.getPlayers());
         game.record(res);
 
+        // Notify observers that a move has been played
+        game.notifyTurnPlayed(current, res);
+
         if (res.won()) {
+            // Transition to GameOver and notify observers
             game.switchTo(new GameOverState());
+            game.notifyGameFinished(current);
         } else {
             order.next();
         }

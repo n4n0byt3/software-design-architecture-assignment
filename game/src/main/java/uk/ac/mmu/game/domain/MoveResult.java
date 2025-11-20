@@ -1,5 +1,8 @@
 package uk.ac.mmu.game.domain;
 
+/**
+ * Immutable record representing the outcome of a single move.
+ */
 public record MoveResult(
         String player,
         int roll,
