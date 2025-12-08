@@ -5,7 +5,7 @@ package uk.ac.mmu.game.domain;
  * Each player has:
  * - a name (e.g. "Red")
  * - a home index on the main ring (e.g. 1 or 10)
- * - a colour letter used in tail labels (e.g. "R", "B")
+ * - a colour letter used in tail labels (e.g. "R", "B").
  */
 public class Player {
 
@@ -17,11 +17,6 @@ public class Player {
     private int progress = 0;
     private int turnsTaken = 0;
 
-    /**
-     * @param name         human-readable name (must be non-blank)
-     * @param homeIndex    starting main-ring position (1-based, must be > 0)
-     * @param colourLetter one-letter code used in tail labels (e.g. "R")
-     */
     public Player(String name, int homeIndex, String colourLetter) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("name is required");

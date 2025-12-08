@@ -2,6 +2,15 @@ package uk.ac.mmu.game.domain;
 
 import java.util.List;
 
+/**
+ * Basic game rules:
+ * - Overshoot moves the player to END and still wins.
+ * - HITs are allowed (multiple players may share a square) unless
+ *   ForfeitOnHitDecorator is applied.
+ *
+ * Note: Turn counting is handled by the Game / GameState layer,
+ * not inside the rules implementation.
+ */
 public class BasicRules implements Rules {
 
     @Override
@@ -15,11 +24,9 @@ public class BasicRules implements Rules {
             to = end;
         }
 
-        // Use Value Object to detect hit in a single, centralised place
         HitInfo hitInfo = HitInfo.detect(board, p, to, all);
 
         p.setProgress(to);
-        p.incTurns();
         boolean won = (to == end);
 
         return new MoveResult(

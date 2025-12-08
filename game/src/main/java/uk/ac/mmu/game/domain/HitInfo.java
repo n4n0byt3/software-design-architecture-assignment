@@ -5,7 +5,7 @@ import java.util.Objects;
 
 /**
  * Immutable Value Object representing the result of checking for a hit
- * on the main ring. It encapsulates whether a hit occurred, who was hit,
+ * on the main ring. Encapsulates whether a hit occurred, who was hit,
  * and at which absolute board position.
  */
 public final class HitInfo {
@@ -14,7 +14,7 @@ public final class HitInfo {
 
     private final boolean hit;
     private final String victimName;
-    private final Integer victimPosAbs; // absolute main ring position (e.g. 12)
+    private final Integer victimPosAbs;
 
     private HitInfo(boolean hit, String victimName, Integer victimPosAbs) {
         this.hit = hit;
@@ -43,9 +43,8 @@ public final class HitInfo {
     }
 
     /**
-     * Domain logic: given a board, a moving player, a prospective progress
-     * value and all players, work out if this move would land on another
-     * piece on the main ring.
+     * Given a board, a moving player, a prospective progress value and all players,
+     * work out if this move would land on another piece on the main ring.
      */
     public static HitInfo detect(Board board, Player mover, int candidateProgress, List<Player> allPlayers) {
         // Hits only happen on the shared main ring

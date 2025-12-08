@@ -3,7 +3,7 @@ package uk.ac.mmu.game.domain;
 /**
  * Represents the game board consisting of:
  * - a shared main ring of positions (1..mainSize)
- * - a player-specific tail of positions (e.g. R1, R2, R3 (End))
+ * - a player-specific tail of positions (e.g. R1, R2, R3 (End)).
  */
 public class Board {
 
@@ -34,7 +34,6 @@ public class Board {
     }
 
     /**
-     * The maximum progress index (0-based) a player can reach.
      * 0            = Home
      * 1..mainSize-1  = main ring
      * mainSize..end  = tail
@@ -57,10 +56,8 @@ public class Board {
         }
         int tailStep = progress - mainSize + 1;
         if (tailStep == tailSize) {
-            // End square label e.g. "R3 (End)"
             return p.getColourLetter() + tailStep + " (End)";
         }
-        // Tail squares before the end, e.g. "Tail Position R1"
         return "Tail Position " + p.getColourLetter() + tailStep;
     }
 

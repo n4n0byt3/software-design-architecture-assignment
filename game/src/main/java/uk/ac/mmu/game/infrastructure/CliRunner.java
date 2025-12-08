@@ -7,13 +7,19 @@ import uk.ac.mmu.game.usecase.ReplayGameUseCase;
 
 import java.util.UUID;
 
+/**
+ * Entry point from the console (no GUI).
+ * Parses command-line args and delegates to the appropriate use case.
+ */
 @Component
 public class CliRunner implements CommandLineRunner {
+
     private final PlayGameUseCase play;
     private final ReplayGameUseCase replay;
 
     public CliRunner(PlayGameUseCase play, ReplayGameUseCase replay) {
-        this.play = play; this.replay = replay;
+        this.play = play;
+        this.replay = replay;
     }
 
     @Override
@@ -28,14 +34,19 @@ public class CliRunner implements CommandLineRunner {
 
             boolean large = hasArg(args, "--large-board");
             int mainSize = large ? 36 : 18;
-            int tailSize = large ? 6  : 3;
+            int tailSize = large ? 6 : 3;
 
             int players = 2;
             String playersVal = getArgValue(args, "--players");
-            if (playersVal != null) players = Integer.parseInt(playersVal);
-            if (large && players < 4) players = 4; // spec large board is 4 players
+            if (playersVal != null) {
+                players = Integer.parseInt(playersVal);
+            }
+            if (large && players < 4) {
+                players = 4; // spec large board is 4 players
+            }
 
-            boolean singleDie = !hasArg(args, "--double");
+            // Default to 2 dice; '--single' enables the single-die variation.
+            boolean singleDie = hasArg(args, "--single");
             boolean exactEnd = hasArg(args, "--exact-end");
             boolean forfeitOnHit = hasArg(args, "--forfeit-on-hit");
 
@@ -48,12 +59,19 @@ public class CliRunner implements CommandLineRunner {
     }
 
     private static boolean hasArg(String[] args, String key) {
-        for (String a : args) if (a.equalsIgnoreCase(key)) return true;
+        for (String a : args) {
+            if (a.equalsIgnoreCase(key)) {
+                return true;
+            }
+        }
         return false;
     }
+
     private static String getArgValue(String[] args, String keyEq) {
         for (String a : args) {
-            if (a.startsWith(keyEq + "=")) return a.substring((keyEq + "=").length());
+            if (a.startsWith(keyEq + "=")) {
+                return a.substring((keyEq + "=").length());
+            }
         }
         return null;
     }

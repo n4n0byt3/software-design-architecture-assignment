@@ -5,7 +5,7 @@ public interface GameState {
     String name();
 
     /** Called when the state becomes active. */
-    default void enter(Game game) { /* no-op */ }
+    default void enter(Game game) { }
 
     /** Perform one logical turn in this state. */
     MoveResult playTurn(Game game);

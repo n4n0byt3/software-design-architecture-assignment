@@ -2,6 +2,10 @@ package uk.ac.mmu.game.domain;
 
 import java.util.List;
 
+/**
+ * Decorator that enforces "must land exactly on END", otherwise
+ * the turn is forfeit and the player remains in place.
+ */
 public class ExactEndDecorator implements Rules {
 
     private final Rules inner;
@@ -16,9 +20,18 @@ public class ExactEndDecorator implements Rules {
         int from = p.getProgress();
         int to = from + roll;
         if (to > end) {
-            // forfeit: remain; mark overshoot, no victim
-            return new MoveResult(p.getName(), roll, from, from,
-                    false, true, false, "", null, null);
+            return new MoveResult(
+                    p.getName(),
+                    roll,
+                    from,
+                    from,
+                    false,
+                    true,
+                    false,
+                    "",
+                    null,
+                    null
+            );
         }
         return inner.apply(board, p, roll, all);
     }

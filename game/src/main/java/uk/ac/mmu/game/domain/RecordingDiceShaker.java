@@ -4,18 +4,27 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/** Decorator that records every roll produced by the delegate. */
+/**
+ * Decorator that records every roll produced by the delegate.
+ * Used for game save / replay.
+ */
 public class RecordingDiceShaker implements DiceShaker {
+
     private final DiceShaker delegate;
     private final List<Integer> rolls = new ArrayList<>();
 
-    public RecordingDiceShaker(DiceShaker delegate) { this.delegate = delegate; }
-
-    @Override public int shake() {
-        int v = delegate.shake();
-        rolls.add(v);
-        return v;
+    public RecordingDiceShaker(DiceShaker delegate) {
+        this.delegate = delegate;
     }
 
-    public List<Integer> getRolls() { return Collections.unmodifiableList(rolls); }
+    @Override
+    public int shake() {
+        int value = delegate.shake();
+        rolls.add(value);
+        return value;
+    }
+
+    public List<Integer> getRolls() {
+        return Collections.unmodifiableList(rolls);
+    }
 }

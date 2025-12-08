@@ -1,17 +1,16 @@
 package uk.ac.mmu.game.infrastructure;
 
-import uk.ac.mmu.game.domain.*;
+import uk.ac.mmu.game.domain.Board;
+import uk.ac.mmu.game.domain.Game;
+import uk.ac.mmu.game.domain.MoveResult;
+import uk.ac.mmu.game.domain.Player;
 import uk.ac.mmu.game.usecase.OutputPort;
 
 /**
  * Console-based presenter and observer.
  *
- * Acts as:
- *  - An {@link OutputPort} (presentation boundary).
- *  - A {@link GameObserver} (via OutputPort extending the observer interfaces).
- *
- * All printing logic is isolated here, keeping the domain model free
- * of any I/O concerns and satisfying the Ports & Adapters style.
+ * Implements OutputPort, which in turn extends GameObserver.
+ * All I/O is kept here (infrastructure) to satisfy Ports & Adapters.
  */
 public class ConsoleOutputAdapter implements OutputPort {
 
@@ -22,7 +21,7 @@ public class ConsoleOutputAdapter implements OutputPort {
         this.board = board;
     }
 
-    // ----- OutputPort "printing" methods -----
+    // OutputPort printing methods
 
     @Override
     public void printTurn(MoveResult r, int turnsForPlayer, Player p) {
@@ -36,7 +35,8 @@ public class ConsoleOutputAdapter implements OutputPort {
         }
 
         String fromLabel = board.labelFor(p, r.fromProgress());
-        String toLabel   = board.labelFor(p, r.toProgress());
+        String toLabel = board.labelFor(p, r.toProgress());
+
         if (r.fromProgress() == r.toProgress()) {
             System.out.printf("%s remains at %s%n", r.player(), toLabel);
         } else {
@@ -46,7 +46,7 @@ public class ConsoleOutputAdapter implements OutputPort {
 
     @Override
     public void printWinner(String player, int totalTurns, int winnerTurns) {
-        System.out.printf("%n%s wins in %d moves!%nTotal plays %d%n", player, winnerTurns, totalTurns);
+        System.out.printf("%n%s wins in %d turns!%nTotal turns %d%n", player, winnerTurns, totalTurns);
     }
 
     @Override
@@ -64,7 +64,7 @@ public class ConsoleOutputAdapter implements OutputPort {
         System.out.printf("Game state %s -> %s%n", from, to);
     }
 
-    // ----- GameObserver callbacks (via OutputPort extends GameObserver) -----
+    // Observer callbacks (via OutputPort extends GameObserver)
 
     @Override
     public void onStateChanged(Game game, String from, String to) {
@@ -73,7 +73,6 @@ public class ConsoleOutputAdapter implements OutputPort {
 
     @Override
     public void onTurnPlayed(Game game, MoveResult result, Player currentPlayer) {
-        // currentPlayer.turnsTaken has already been incremented by the rules
         printTurn(result, currentPlayer.getTurnsTaken(), currentPlayer);
     }
 
