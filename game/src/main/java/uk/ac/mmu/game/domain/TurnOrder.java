@@ -4,8 +4,12 @@ import java.util.List;
 
 /**
  * Simple cyclic turn order for N players.
+ *
+ * Contract:
+ * - players must be a non-empty list.
+ * - current() always returns the same player until next() is called.
  */
-public class TurnOrder {
+public final class TurnOrder {
 
     private final List<Player> players;
     private int idx = 0;

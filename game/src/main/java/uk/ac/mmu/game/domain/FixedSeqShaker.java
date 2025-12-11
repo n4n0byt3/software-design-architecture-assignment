@@ -1,7 +1,7 @@
 package uk.ac.mmu.game.domain;
 
 /** Dice that plays back a fixed sequence of rolls (for replay or tests). */
-public class FixedSeqShaker implements DiceShaker {
+public final class FixedSeqShaker implements DiceShaker {
 
     private final int[] seq;
     private int index = 0;

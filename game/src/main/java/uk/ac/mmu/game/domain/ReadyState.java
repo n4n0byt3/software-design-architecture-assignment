@@ -4,7 +4,7 @@ package uk.ac.mmu.game.domain;
  * Lifecycle "Ready" state from the GameStates model.
  * First call to playTurn() transitions to InPlay and plays the first turn.
  */
-public class ReadyState implements GameState {
+public final class ReadyState implements GameState {
 
     @Override
     public String name() {

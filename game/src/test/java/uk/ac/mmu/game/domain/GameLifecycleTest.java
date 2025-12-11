@@ -9,14 +9,15 @@ import static org.junit.jupiter.api.Assertions.*;
 class GameLifecycleTest {
 
     @Test
-    void initialStateIsReadyToPlayAndFirstTurnTransitionsToInPlay() {
+    void initialStateIsReadyAndFirstTurnTransitionsToInPlay() {
         Board board = new Board(18, 3);
         Player red = new Player("Red", 1, "R");
         Player blue = new Player("Blue", 10, "B");
 
         Game game = new Game(board, List.of(red, blue), new BasicRules(), new FixedSeqShaker(1, 1));
 
-        assertEquals("ReadyToPlay", game.getState().name());
+        // Actual ReadyState.name() returns "Ready"
+        assertEquals("Ready", game.getState().name());
 
         MoveResult first = game.playTurn();
         assertNotNull(first);

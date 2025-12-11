@@ -6,7 +6,7 @@ import java.util.List;
  * Decorator that enforces "turn is forfeit if a HIT would occur":
  * if a move would land on another player, the moving player stays in place.
  */
-public class ForfeitOnHitDecorator implements Rules {
+public final class ForfeitOnHitDecorator implements Rules {
 
     private final Rules inner;
 

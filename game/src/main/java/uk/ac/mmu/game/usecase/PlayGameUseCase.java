@@ -11,9 +11,13 @@ import java.util.UUID;
  * Use case: play a game from configuration through to completion,
  * then save it for later replay.
  *
- * Depends only on domain and port abstractions (OutputPort, GameRepository, GameMediator).
+ * This is an application-level orchestration that:
+ * - chooses Strategies (via {@link GameFactory}) based on config flags
+ * - drives the Game state machine until completion
+ * - triggers persistence through the {@link GameRepository} port
+ * - pushes messages out through the {@link OutputPort} and {@link GameMediator}
  */
-public class PlayGameUseCase {
+public final class PlayGameUseCase {
 
     private final GameFactory factory;
     private final OutputPort out;
@@ -33,9 +37,12 @@ public class PlayGameUseCase {
     /**
      * Run a game then save it.
      *
-     * @param mainSize  18 or 36
-     * @param tailSize  3 or 6
-     * @param players   2 or 4
+     * @param mainSize     18 or 36
+     * @param tailSize     3 or 6
+     * @param players      2 or 4
+     * @param singleDie    true = use single-die strategy, false = double
+     * @param exactEnd     true = wrap rules with ExactEndDecorator
+     * @param forfeitOnHit true = wrap rules with ForfeitOnHitDecorator
      */
     public void execute(int mainSize,
                         int tailSize,

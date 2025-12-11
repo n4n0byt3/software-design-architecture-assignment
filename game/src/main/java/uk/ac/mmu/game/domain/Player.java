@@ -6,8 +6,14 @@ package uk.ac.mmu.game.domain;
  * - a name (e.g. "Red")
  * - a home index on the main ring (e.g. 1 or 10)
  * - a colour letter used in tail labels (e.g. "R", "B").
+ *
+ * Contract:
+ * - name and colourLetter must be non-blank.
+ * - homeIndex must be positive.
+ * - progress is managed via the Game/Rules layers and must always be
+ *   between 0 and board.endProgress() for any valid board.
  */
-public class Player {
+public final class Player {
 
     private final String name;
     private final int homeIndex;

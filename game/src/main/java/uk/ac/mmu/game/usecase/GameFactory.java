@@ -9,8 +9,15 @@ import java.util.List;
  * Factory for building Game instances for both 2-player and 4-player
  * configurations, small or large boards, and from saved snapshots.
  *
- * This is a use case layer construct that wires domain objects
- * together but does not depend on infrastructure.
+ * This class lives in the use case layer and is responsible for
+ * wiring domain Strategies together:
+ *
+ * - Dice strategy: {@link RandomSingleDiceShaker} vs {@link RandomDoubleDiceShaker}
+ * - Rules strategy: {@link BasicRules} decorated by
+ *   {@link ExactEndDecorator} and/or {@link ForfeitOnHitDecorator}
+ *
+ * The Game itself never needs to know which concrete implementations are
+ * used – it only depends on {@link DiceShaker} and {@link Rules}.
  */
 public class GameFactory {
 
@@ -22,6 +29,10 @@ public class GameFactory {
     /**
      * Build a game given board sizes and number of players.
      * mainSize = 18 or 36, tailSize = 3 or 6, players = 2 or 4.
+     *
+     * The boolean parameters act as configuration flags which are
+     * translated into Strategy and Decorator choices, rather than
+     * being checked inside the Game itself.
      */
     public Game createGame(int mainSize,
                            int tailSize,
@@ -30,15 +41,17 @@ public class GameFactory {
                            boolean exactEnd,
                            boolean forfeitOnHit) {
 
+        // --- Dice strategy selection (Strategy pattern) ---
         DiceShaker base = singleDie
                 ? RandomSingleDiceShaker.INSTANCE
                 : RandomDoubleDiceShaker.INSTANCE;
 
-        // Wrap in RecordingDiceShaker so we can save rolls later
+        // Wrap in RecordingDiceShaker so we can save rolls later (Game Save / Replay)
         DiceShaker dice = new RecordingDiceShaker(base);
 
         Board board = new Board(mainSize, tailSize);
 
+        // --- Player configuration (domain objects only, no I/O) ---
         List<Player> ps = new ArrayList<>();
         if (players == 2) {
             ps.add(new Player("Red", 1, "R"));
@@ -53,6 +66,7 @@ public class GameFactory {
             throw new IllegalArgumentException("players must be 2 or 4");
         }
 
+        // --- Movement rules strategy (Strategy + Decorator pattern) ---
         Rules rules = new BasicRules();
         if (exactEnd) {
             rules = new ExactEndDecorator(rules);
@@ -65,8 +79,11 @@ public class GameFactory {
     }
 
     /**
-     * Build a game from a saved snapshot using FixedSeqShaker
+     * Build a game from a saved snapshot using {@link FixedSeqShaker}
      * for exact replay of the dice rolls.
+     *
+     * This reuses the same strategy wiring, but substitutes a different
+     * DiceShaker to follow the original recorded sequence.
      */
     public Game createFromSave(GameSave s) {
         int[] rolls = s.rolls.stream().mapToInt(Integer::intValue).toArray();

@@ -22,7 +22,10 @@ class ExactEndDecoratorTest {
         assertFalse(mr.overshoot());
         assertFalse(mr.won());
         assertEquals(18, red.getProgress());
-        assertEquals(1, red.getTurnsTaken());
+
+        // Turn counting is handled by the Game / InPlayState,
+        // not by the rules / decorators.
+        assertEquals(0, red.getTurnsTaken());
     }
 
     @Test
@@ -39,6 +42,8 @@ class ExactEndDecoratorTest {
         assertTrue(mr.overshoot());
         assertFalse(mr.won());
         assertEquals(19, red.getProgress(), "Progress must not change on overshoot-forfeit");
-        assertEquals(0, red.getTurnsTaken(), "Turn is forfeited, so we do not increment turnsTaken here");
+
+        // Again: rules layer does not change turnsTaken.
+        assertEquals(0, red.getTurnsTaken(), "Turn is forfeited at rules level; Game increments turns");
     }
 }

@@ -7,13 +7,18 @@ import java.util.Optional;
 /**
  * Core domain object representing a single game session.
  *
+ * Acts as the Subject in the Observer pattern (Week 4):
+ * - Publishes state change events to {@link GameStateObserver}s
+ * - Publishes turn events to {@link PlayerTurnObserver}s
+ * - Publishes completion events to {@link GameFinishedObserver}s
+ *
  * Uses:
  * - Strategy (DiceShaker, Rules)
  * - Decorator (ExactEndDecorator, ForfeitOnHitDecorator)
- * - State (ReadyToPlay, InPlay, GameOver)
+ * - State (ReadyState, InPlayState, GameOverState)
  * - Observer (GameObserver interfaces).
  */
-public class Game {
+public final class Game {
 
     private final Board board;
     private final TurnOrder turnOrder;
@@ -98,6 +103,29 @@ public class Game {
         addFinishedObserver(observer);
     }
 
+    // NEW: observer removal (typical Week-4 pattern)
+
+    public void removeStateObserver(GameStateObserver observer) {
+        stateObservers.remove(observer);
+    }
+
+    public void removeTurnObserver(PlayerTurnObserver observer) {
+        turnObservers.remove(observer);
+    }
+
+    public void removeFinishedObserver(GameFinishedObserver observer) {
+        finishedObservers.remove(observer);
+    }
+
+    public void removeObserver(GameObserver observer) {
+        if (observer == null) {
+            return;
+        }
+        removeStateObserver(observer);
+        removeTurnObserver(observer);
+        removeFinishedObserver(observer);
+    }
+
     // State management
 
     public void switchTo(GameState next) {
@@ -154,7 +182,7 @@ public class Game {
         int totalTurns = turnOrder.all().stream()
                 .mapToInt(Player::getTurnsTaken)
                 .sum();
-        int winnerTurns = winner != null ? winner.getTurnsTaken() : 0;
+        int winnerTurns = (winner != null) ? winner.getTurnsTaken() : 0;
 
         for (GameFinishedObserver obs : finishedObservers) {
             obs.onGameFinished(this, winner, totalTurns, winnerTurns);

@@ -8,7 +8,7 @@ import java.util.UUID;
 /**
  * Use case: replay a previously-saved game from its snapshot.
  */
-public class ReplayGameUseCase {
+public final class ReplayGameUseCase {
 
     private final GameRepository repo;
     private final GameFactory factory;

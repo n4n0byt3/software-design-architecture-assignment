@@ -6,7 +6,7 @@ import java.util.List;
  * Decorator that enforces "must land exactly on END", otherwise
  * the turn is forfeit and the player remains in place.
  */
-public class ExactEndDecorator implements Rules {
+public final class ExactEndDecorator implements Rules {
 
     private final Rules inner;
 

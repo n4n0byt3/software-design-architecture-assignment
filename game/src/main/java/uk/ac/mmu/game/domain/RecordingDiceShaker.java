@@ -8,7 +8,7 @@ import java.util.List;
  * Decorator that records every roll produced by the delegate.
  * Used for game save / replay.
  */
-public class RecordingDiceShaker implements DiceShaker {
+public final class RecordingDiceShaker implements DiceShaker {
 
     private final DiceShaker delegate;
     private final List<Integer> rolls = new ArrayList<>();

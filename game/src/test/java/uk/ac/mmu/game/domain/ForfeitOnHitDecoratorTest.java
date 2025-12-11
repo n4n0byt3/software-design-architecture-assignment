@@ -26,7 +26,9 @@ class ForfeitOnHitDecoratorTest {
         assertFalse(mr.overshoot());
         assertFalse(mr.won());
         assertEquals(1, p1.getProgress(), "Player must remain on the original square");
-        assertEquals(0, p1.getTurnsTaken(), "Turn is forfeited, so turnsTaken is not incremented");
+
+        // Rules/decorators don't touch turnsTaken; Game does that.
+        assertEquals(0, p1.getTurnsTaken(), "Rules layer does not increment turnsTaken");
     }
 
     @Test
@@ -42,6 +44,8 @@ class ForfeitOnHitDecoratorTest {
         assertEquals(1, mr.fromProgress());
         assertEquals(4, mr.toProgress());
         assertEquals(4, p1.getProgress());
-        assertEquals(1, p1.getTurnsTaken());
+
+        // Still: turn counting is Game responsibility.
+        assertEquals(0, p1.getTurnsTaken());
     }
 }

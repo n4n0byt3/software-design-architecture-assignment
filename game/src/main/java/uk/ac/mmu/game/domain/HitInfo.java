@@ -7,6 +7,10 @@ import java.util.Objects;
  * Immutable Value Object representing the result of checking for a hit
  * on the main ring. Encapsulates whether a hit occurred, who was hit,
  * and at which absolute board position.
+ *
+ * Contract for detect():
+ * - board, mover and allPlayers must be non-null.
+ * - candidateProgress must be in [0, board.endProgress()].
  */
 public final class HitInfo {
 
@@ -45,8 +49,25 @@ public final class HitInfo {
     /**
      * Given a board, a moving player, a prospective progress value and all players,
      * work out if this move would land on another piece on the main ring.
+     *
+     * @throws IllegalArgumentException if arguments break the stated contract.
      */
-    public static HitInfo detect(Board board, Player mover, int candidateProgress, List<Player> allPlayers) {
+    public static HitInfo detect(Board board,
+                                 Player mover,
+                                 int candidateProgress,
+                                 List<Player> allPlayers) {
+
+        Objects.requireNonNull(board, "board is required");
+        Objects.requireNonNull(mover, "mover is required");
+        Objects.requireNonNull(allPlayers, "allPlayers is required");
+
+        int end = board.endProgress();
+        if (candidateProgress < 0 || candidateProgress > end) {
+            throw new IllegalArgumentException(
+                    "candidateProgress out of range: " + candidateProgress + " (0.." + end + ")"
+            );
+        }
+
         // Hits only happen on the shared main ring
         if (candidateProgress >= board.mainSize()) {
             return noHit();

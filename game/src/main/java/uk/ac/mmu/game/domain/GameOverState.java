@@ -1,6 +1,6 @@
 package uk.ac.mmu.game.domain;
 
-public class GameOverState implements GameState {
+public final class GameOverState implements GameState {
 
     @Override
     public String name() {
