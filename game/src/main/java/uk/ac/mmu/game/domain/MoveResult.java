@@ -15,6 +15,7 @@ public record MoveResult(
         String hitVictimName,   // null if no hit
         Integer hitVictimPos    // absolute main ring pos if hit on ring
 ) {
+
     public static MoveResult gameOver() {
         return new MoveResult(
                 "N/A",
@@ -28,5 +29,13 @@ public record MoveResult(
                 null,
                 null
         );
+    }
+
+    /**
+     * A simple rule for "forfeit" in this implementation:
+     * - you stayed on the same square AND (overshoot OR hit)
+     */
+    public boolean forfeited() {
+        return fromProgress == toProgress && (overshoot || hit);
     }
 }

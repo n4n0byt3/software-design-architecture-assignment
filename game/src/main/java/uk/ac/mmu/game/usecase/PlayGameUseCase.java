@@ -2,48 +2,37 @@ package uk.ac.mmu.game.usecase;
 
 import uk.ac.mmu.game.domain.Game;
 import uk.ac.mmu.game.domain.MoveResult;
-import uk.ac.mmu.game.domain.Player;
 import uk.ac.mmu.game.domain.RecordingDiceShaker;
 
 import java.util.UUID;
 
 /**
- * Use case: play a game from configuration through to completion,
- * then save it for later replay.
+ * Use case: play a game to completion, then save it for replay.
  *
- * This is an application-level orchestration that:
- * - chooses Strategies (via {@link GameFactory}) based on config flags
- * - drives the Game state machine until completion
- * - triggers persistence through the {@link GameRepository} port
- * - pushes messages out through the {@link OutputPort} and {@link GameMediator}
+ * Responsibilities:
+ * - Build a Game via GameFactory
+ * - Attach output observer (port)
+ * - Run until GameOver
+ * - Demonstrate GameOver state behaviour (attempt extra turns)
+ * - Save a replay snapshot (config + dice rolls)
  */
-public final class PlayGameUseCase {
+public class PlayGameUseCase {
 
     private final GameFactory factory;
-    private final OutputPort out;
-    private final GameRepository repo;
-    private final GameMediator mediator;
+    private final GameOutputPort output;
+    private final GameSaveRepository repository;
+    private final GameEventMediator mediator;
 
     public PlayGameUseCase(GameFactory factory,
-                           OutputPort out,
-                           GameRepository repo,
-                           GameMediator mediator) {
+                           GameOutputPort output,
+                           GameSaveRepository repository,
+                           GameEventMediator mediator) {
         this.factory = factory;
-        this.out = out;
-        this.repo = repo;
+        this.output = output;
+        this.repository = repository;
         this.mediator = mediator;
     }
 
-    /**
-     * Run a game then save it.
-     *
-     * @param mainSize     18 or 36
-     * @param tailSize     3 or 6
-     * @param players      2 or 4
-     * @param singleDie    true = use single-die strategy, false = double
-     * @param exactEnd     true = wrap rules with ExactEndDecorator
-     * @param forfeitOnHit true = wrap rules with ForfeitOnHitDecorator
-     */
     public void execute(int mainSize,
                         int tailSize,
                         int players,
@@ -53,34 +42,36 @@ public final class PlayGameUseCase {
 
         Game game = factory.createGame(mainSize, tailSize, players, singleDie, exactEnd, forfeitOnHit);
 
-        // attach output as observer & give it the board
-        game.addObserver(out);
-        out.setBoard(game.getBoard());
+        // Output is a port (interface) and also a domain observer.
+        game.addObserver(output);
+        output.setBoard(game.getBoard());
 
         mediator.event("Starting game");
-        out.printConfig(String.format(
+        output.printConfig(String.format(
                 "Board positions=%d, Tail positions=%d, Players=%d, singleDie=%s, exactEnd=%s, forfeitOnHit=%s",
                 mainSize, tailSize, players, singleDie, exactEnd, forfeitOnHit
         ));
 
-        // main loop – state machine handles transitions & winner
         while (!game.isOver()) {
             game.playTurn();
         }
 
-        // Show "Game over" behaviour with two extra rolls in GameOver state
+        // Demonstrate GameOver behaviour:
+        // further turns should return the sentinel result.
+        // Requirement: print "Game over" once.
+        boolean printedGameOver = false;
         for (int i = 0; i < 2; i++) {
             MoveResult extra = game.playTurn();
-            if ("Game over".equals(extra.note())) {
-                out.printGameOver();
+            if (!printedGameOver && "Game over".equals(extra.note())) {
+                output.printGameOver();
+                printedGameOver = true;
             }
         }
 
         mediator.event("Finished game");
 
-        // Save snapshot using recorded dice sequence (if available)
-        RecordingDiceShaker rec = (game.getDice() instanceof RecordingDiceShaker r) ? r : null;
-        if (rec != null) {
+        // Save using recorded rolls (RecordingDiceShaker decorates the dice).
+        if (game.getDice() instanceof RecordingDiceShaker rec) {
             GameSave save = new GameSave(
                     null,
                     mainSize,
@@ -91,10 +82,11 @@ public final class PlayGameUseCase {
                     forfeitOnHit,
                     rec.getRolls()
             );
-            UUID id = repo.save(save);
-            out.printConfig("Saved game id: " + id);
+
+            UUID id = repository.save(save);
+            output.printConfig("Saved game id: " + id);
         } else {
-            out.printConfig("Note: dice were not recordable; game not saved.");
+            output.printConfig("Note: dice were not recordable; game not saved.");
         }
     }
 }

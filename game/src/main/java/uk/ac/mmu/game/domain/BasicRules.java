@@ -4,35 +4,34 @@ import java.util.List;
 
 /**
  * Basic game rules:
- * - Overshoot moves the player to END and still wins.
- * - HITs are allowed (multiple players may share a square) unless
- *   ForfeitOnHitDecorator is applied.
+ * <ul>
+ *   <li>Overshoot moves the player to END and still wins.</li>
+ *   <li>HITs are allowed (players may share a square) unless ForfeitOnHitDecorator is applied.</li>
+ * </ul>
  *
- * This class is deliberately responsible only for
- *   "given a roll, where does the piece end up?"
- * Turn counting is handled by the Game / GameState layer.
+ * <p>NOTE: This class does NOT increment turnsTaken.
+ * Turn counting is handled by the game loop (InPlayState) so forfeits can skip counting.
  */
-public final class BasicRules implements Rules {
+public class BasicRules implements Rules {
 
     @Override
-    public MoveResult apply(Board board, Player p, int roll, List<Player> all) {
+    public MoveResult apply(Board board, Player player, int roll, List<Player> allPlayers) {
         int end = board.endProgress();
-        int from = p.getProgress();
-        int to = from + roll;
-        boolean overshoot = to > end;
 
-        if (overshoot) {
-            to = end;
-        }
+        int from = player.getProgress();
+        int proposedTo = from + roll;
 
-        HitInfo hitInfo = HitInfo.detect(board, p, to, all);
+        boolean overshoot = proposedTo > end;
+        int to = overshoot ? end : proposedTo;
 
-        // Movement only – turns are incremented in InPlayState.
-        p.setProgress(to);
+        HitInfo hitInfo = HitInfo.detect(board, player, to, allPlayers);
+
+        // In basic rules, move always happens (even if it hits).
+        player.setProgress(to);
         boolean won = (to == end);
 
         return new MoveResult(
-                p.getName(),
+                player.getName(),
                 roll,
                 from,
                 to,

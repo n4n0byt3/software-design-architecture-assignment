@@ -1,24 +1,26 @@
 package uk.ac.mmu.game.domain;
 
 /**
- * Represents the game board consisting of:
- * - a shared main ring of positions (1..mainSize)
- * - a player-specific tail of positions (e.g. R1, R2, R3 (End)).
+ * Represents the game board:
+ * <ul>
+ *   <li>A shared main ring of positions (1..mainSize)</li>
+ *   <li>A player-specific tail of positions (e.g. R1, R2, R3 (End))</li>
+ * </ul>
  *
- * Contract:
- * - mainSize and tailSize must be > 0.
- * - All progress values passed to this class must be in the range [0, endProgress()].
- *   If not, an IllegalArgumentException is thrown.
+ * <p>Players track "progress" as an abstract integer in range 0..endProgress:
+ * <ul>
+ *   <li>0 = Home</li>
+ *   <li>1..mainSize-1 = main ring movement</li>
+ *   <li>mainSize..endProgress = tail movement</li>
+ * </ul>
+ *
+ * <p>That abstract progress maps to different absolute ring positions depending on a player's home index.
  */
-public final class Board {
+public class Board {
 
     private final int mainSize;
     private final int tailSize;
 
-    /**
-     * @param mainSize number of shared ring positions (must be > 0)
-     * @param tailSize number of tail positions per player (must be > 0)
-     */
     public Board(int mainSize, int tailSize) {
         if (mainSize <= 0) {
             throw new IllegalArgumentException("mainSize must be > 0");
@@ -39,69 +41,45 @@ public final class Board {
     }
 
     /**
-     * 0              = Home
-     * 1..mainSize-1  = main ring
-     * mainSize..end  = tail
+     * Returns the maximum progress value (i.e. End).
+     *
+     * <p>Example:
+     * small board: 18 + 3 - 1 = 20
+     * large board: 36 + 6 - 1 = 41
      */
     public int endProgress() {
         return mainSize + tailSize - 1;
     }
 
     /**
-     * Convert a player's abstract progress (0..endProgress) into a
-     * human-readable label that matches the assignment examples.
-     *
-     * @param p        player context (must not be null)
-     * @param progress abstract progress in [0, endProgress()]
+     * Converts abstract progress into the required human-readable label.
      */
-    public String labelFor(Player p, int progress) {
-        if (p == null) {
-            throw new IllegalArgumentException("player is required");
-        }
-        validateProgress(progress);
-
+    public String labelFor(Player player, int progress) {
         if (progress == 0) {
-            return "Home (Position " + p.getHomeIndex() + ")";
+            return "Home (Position " + player.getHomeIndex() + ")";
         }
+
+        // Main ring: progress < mainSize (because mainSize itself is the first tail square)
         if (progress < mainSize) {
-            int mainPos = mainRingPosFor(p, progress);
-            return "Position " + mainPos;
+            int ringPos = mainRingPosFor(player, progress);
+            return "Position " + ringPos;
         }
-        int tailStep = progress - mainSize + 1;
+
+        // Tail: progress >= mainSize
+        int tailStep = progress - mainSize + 1; // 1..tailSize
         if (tailStep == tailSize) {
-            return p.getColourLetter() + tailStep + " (End)";
+            return player.getColourLetter() + tailStep + " (End)";
         }
-        return "Tail Position " + p.getColourLetter() + tailStep;
+        return "Tail Position " + player.getColourLetter() + tailStep;
     }
 
     /**
-     * Get the absolute main-ring position (1..mainSize) for a player
-     * given their progress, assuming progress is on the main ring.
+     * Computes absolute ring position (1..mainSize) for a given player and ring progress.
      *
-     * @throws IllegalArgumentException if progress is not in [0, end] or is not on the main ring.
+     * <p>ringProgress is still the abstract progress value (0..mainSize-1), where:
+     * 0 means "on home square on the ring".
      */
-    public int mainRingPosFor(Player p, int progress) {
-        if (p == null) {
-            throw new IllegalArgumentException("player is required");
-        }
-        validateProgress(progress);
-        if (progress >= mainSize) {
-            throw new IllegalArgumentException(
-                    "Progress " + progress + " is not on the main ring (mainSize=" + mainSize + ")"
-            );
-        }
-        return ((p.getHomeIndex() - 1 + progress) % mainSize) + 1;
-    }
-
-    /**
-     * Contract check: progress must always be between 0 and endProgress().
-     */
-    private void validateProgress(int progress) {
-        int end = endProgress();
-        if (progress < 0 || progress > end) {
-            throw new IllegalArgumentException(
-                    "progress out of range: " + progress + " (expected 0.." + end + ")"
-            );
-        }
+    public int mainRingPosFor(Player player, int ringProgress) {
+        return ((player.getHomeIndex() - 1 + ringProgress) % mainSize) + 1;
     }
 }

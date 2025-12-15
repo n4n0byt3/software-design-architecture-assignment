@@ -1,36 +1,35 @@
 package uk.ac.mmu.game.domain;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
  * Simple cyclic turn order for N players.
- *
- * Contract:
- * - players must be a non-empty list.
- * - current() always returns the same player until next() is called.
  */
-public final class TurnOrder {
+public class TurnOrder {
 
     private final List<Player> players;
-    private int idx = 0;
+    private int index = 0;
 
     public TurnOrder(List<Player> players) {
         if (players == null || players.isEmpty()) {
             throw new IllegalArgumentException("players are required");
         }
-        this.players = players;
+        // Defensive copy to avoid external mutation.
+        this.players = new ArrayList<>(players);
     }
 
     public Player current() {
-        return players.get(idx);
+        return players.get(index);
     }
 
     public Player next() {
-        idx = (idx + 1) % players.size();
+        index = (index + 1) % players.size();
         return current();
     }
 
     public List<Player> all() {
-        return players;
+        return Collections.unmodifiableList(players);
     }
 }

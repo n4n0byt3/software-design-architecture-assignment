@@ -3,29 +3,35 @@ package uk.ac.mmu.game.domain;
 import java.util.List;
 
 /**
- * Decorator that enforces "turn is forfeit if a HIT would occur":
- * if a move would land on another player, the moving player stays in place.
+ * Variation: forfeit if a HIT would occur.
+ *
+ * <p>If a move would land on another player on the main ring,
+ * the mover stays in place and the turn is forfeited.
  */
-public final class ForfeitOnHitDecorator implements Rules {
+public class ForfeitOnHitDecorator implements Rules {
 
     private final Rules inner;
 
     public ForfeitOnHitDecorator(Rules inner) {
+        if (inner == null) {
+            throw new IllegalArgumentException("inner rules are required");
+        }
         this.inner = inner;
     }
 
     @Override
-    public MoveResult apply(Board board, Player p, int roll, List<Player> all) {
-        int from = p.getProgress();
+    public MoveResult apply(Board board, Player player, int roll, List<Player> allPlayers) {
         int end = board.endProgress();
-        int candidateTo = Math.min(from + roll, end);
 
-        HitInfo hitInfo = HitInfo.detect(board, p, candidateTo, all);
+        int from = player.getProgress();
+        int proposedTo = Math.min(from + roll, end);
+
+        HitInfo hitInfo = HitInfo.detect(board, player, proposedTo, allPlayers);
 
         if (hitInfo.hit()) {
-            // Forfeit on hit: remain at 'from', but report hit details.
+            // Forfeit on hit: stay where you are.
             return new MoveResult(
-                    p.getName(),
+                    player.getName(),
                     roll,
                     from,
                     from,
@@ -38,6 +44,6 @@ public final class ForfeitOnHitDecorator implements Rules {
             );
         }
 
-        return inner.apply(board, p, roll, all);
+        return inner.apply(board, player, roll, allPlayers);
     }
 }

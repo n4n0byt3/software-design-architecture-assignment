@@ -4,7 +4,7 @@ import java.util.Random;
 
 /**
  * Generates a random number between 1 and 6.
- * Implemented as a Singleton.
+ * Implemented as a Singleton (stateless API).
  */
 public final class RandomSingleDiceShaker implements DiceShaker {
 

@@ -1,48 +1,75 @@
 package uk.ac.mmu.game.usecase;
 
 import org.junit.jupiter.api.Test;
-import uk.ac.mmu.game.domain.Game;
-import uk.ac.mmu.game.domain.RecordingDiceShaker;
-import uk.ac.mmu.game.infrastructure.ConsoleOutputAdapter;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Unit test for ReplayGameUseCase.
+ * Uses an in-memory repository to return a prepared GameSave snapshot.
+ */
 class ReplayGameUseCaseTest {
 
-    private static class InMemoryGameRepository implements GameRepository {
+    private static final class InMemoryGameSaveRepository implements GameSaveRepository {
         private final GameSave stored;
 
-        InMemoryGameRepository(GameSave save) {
-            this.stored = save;
+        InMemoryGameSaveRepository(GameSave stored) {
+            this.stored = stored;
         }
 
         @Override
         public UUID save(GameSave save) {
-            throw new UnsupportedOperationException("Not needed for this test");
+            throw new UnsupportedOperationException("save() not needed for this test");
         }
 
         @Override
         public GameSave load(UUID id) {
             return stored;
         }
+
+        @Override
+        public List<UUID> listIds() {
+            return (stored == null || stored.id == null) ? Collections.emptyList() : List.of(stored.id);
+        }
+
+        @Override
+        public List<GameSave> listAll() {
+            return stored == null ? List.of() : List.of(stored);
+        }
     }
 
-    private static class RecordingMediator implements GameMediator {
-        final java.util.List<String> events = new java.util.ArrayList<>();
+    private static final class RecordingMediator implements GameEventMediator {
+        private final List<String> events = new ArrayList<>();
+
         @Override
         public void event(String message) {
             events.add(message);
         }
+
+        boolean anyStartsWith(String prefix) {
+            return events.stream().anyMatch(e -> e.startsWith(prefix));
+        }
+    }
+
+    private static final class SilentOutputPort implements GameOutputPort {
+        @Override public void printTurn(uk.ac.mmu.game.domain.MoveResult result, int turnsForPlayer, uk.ac.mmu.game.domain.Player playerCtx) { }
+        @Override public void printWinner(String playerName, int totalTurns, int winnerTurns) { }
+        @Override public void onStateChanged(uk.ac.mmu.game.domain.Game game, String from, String to) { }
+        @Override public void onTurnPlayed(uk.ac.mmu.game.domain.Game game, uk.ac.mmu.game.domain.MoveResult result, uk.ac.mmu.game.domain.Player currentPlayer) { }
+        @Override public void onGameFinished(uk.ac.mmu.game.domain.Game game, uk.ac.mmu.game.domain.Player winner, int totalTurns, int winnerTurns) { }
     }
 
     @Test
-    void replayLoadsSnapshotAndReplaysToGameOver() throws Exception {
+    void replayLoadsSnapshotAndEmitsStartAndFinishEvents() throws Exception {
+        UUID id = UUID.randomUUID();
+
         GameSave save = new GameSave(
-                UUID.randomUUID(),
+                id,
                 18,
                 3,
                 2,
@@ -52,22 +79,16 @@ class ReplayGameUseCaseTest {
                 List.of(12, 12, 7, 8)
         );
 
-        InMemoryGameRepository repo = new InMemoryGameRepository(save);
+        InMemoryGameSaveRepository repo = new InMemoryGameSaveRepository(save);
         GameFactory factory = new GameFactory();
-        ConsoleOutputAdapter out = new ConsoleOutputAdapter();
+        SilentOutputPort out = new SilentOutputPort();
         RecordingMediator mediator = new RecordingMediator();
 
-        ReplayGameUseCase replay = new ReplayGameUseCase(repo, factory, out, mediator);
+        ReplayGameUseCase useCase = new ReplayGameUseCase(repo, factory, out, mediator);
 
-        replay.replay(save.id);
+        useCase.replay(id);
 
-        assertTrue(
-                mediator.events.stream().anyMatch(e -> e.startsWith("Replaying game")),
-                "Should log replay start"
-        );
-        assertTrue(
-                mediator.events.stream().anyMatch(e -> e.startsWith("Finished replay")),
-                "Should log replay end"
-        );
+        assertTrue(mediator.anyStartsWith("Replaying game"), "Should emit replay start event");
+        assertTrue(mediator.anyStartsWith("Finished replay"), "Should emit replay finished event");
     }
 }

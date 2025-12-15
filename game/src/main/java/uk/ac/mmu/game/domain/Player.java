@@ -1,19 +1,18 @@
 package uk.ac.mmu.game.domain;
 
 /**
- * Represents a single player in the game.
- * Each player has:
- * - a name (e.g. "Red")
- * - a home index on the main ring (e.g. 1 or 10)
- * - a colour letter used in tail labels (e.g. "R", "B").
+ * Represents a player and their state.
  *
- * Contract:
- * - name and colourLetter must be non-blank.
- * - homeIndex must be positive.
- * - progress is managed via the Game/Rules layers and must always be
- *   between 0 and board.endProgress() for any valid board.
+ * <p>Fields:
+ * <ul>
+ *   <li>name - e.g. "Red"</li>
+ *   <li>homeIndex - absolute starting square on the ring (e.g. 1, 10, 19, 28)</li>
+ *   <li>colourLetter - used for tail labels (e.g. "R")</li>
+ *   <li>progress - abstract progress around board (0..endProgress)</li>
+ *   <li>turnsTaken - number of non-forfeited turns taken (counted by InPlayState)</li>
+ * </ul>
  */
-public final class Player {
+public class Player {
 
     private final String name;
     private final int homeIndex;
@@ -21,6 +20,8 @@ public final class Player {
 
     // 0..board.endProgress()
     private int progress = 0;
+
+    // Turn counting is intentionally done at Game/InPlayState, not in rules.
     private int turnsTaken = 0;
 
     public Player(String name, int homeIndex, String colourLetter) {
@@ -33,6 +34,7 @@ public final class Player {
         if (colourLetter == null || colourLetter.isBlank()) {
             throw new IllegalArgumentException("colourLetter is required");
         }
+
         this.name = name;
         this.homeIndex = homeIndex;
         this.colourLetter = colourLetter;
@@ -63,7 +65,7 @@ public final class Player {
     }
 
     public void incTurns() {
-        this.turnsTaken++;
+        turnsTaken++;
     }
 
     public boolean isAtEnd(Board board) {
@@ -72,9 +74,12 @@ public final class Player {
 
     @Override
     public String toString() {
-        return String.format(
-                "Player{name='%s', homeIndex=%d, colourLetter='%s', progress=%d, turnsTaken=%d}",
-                name, homeIndex, colourLetter, progress, turnsTaken
-        );
+        return "Player{" +
+                "name='" + name + '\'' +
+                ", homeIndex=" + homeIndex +
+                ", colourLetter='" + colourLetter + '\'' +
+                ", progress=" + progress +
+                ", turnsTaken=" + turnsTaken +
+                '}';
     }
 }

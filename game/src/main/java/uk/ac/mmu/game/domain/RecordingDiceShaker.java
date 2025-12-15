@@ -6,14 +6,17 @@ import java.util.List;
 
 /**
  * Decorator that records every roll produced by the delegate.
- * Used for game save / replay.
+ * Used for game save / replay (store config + roll sequence).
  */
-public final class RecordingDiceShaker implements DiceShaker {
+public class RecordingDiceShaker implements DiceShaker {
 
     private final DiceShaker delegate;
     private final List<Integer> rolls = new ArrayList<>();
 
     public RecordingDiceShaker(DiceShaker delegate) {
+        if (delegate == null) {
+            throw new IllegalArgumentException("delegate is required");
+        }
         this.delegate = delegate;
     }
 

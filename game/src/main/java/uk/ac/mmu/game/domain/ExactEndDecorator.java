@@ -3,25 +3,32 @@ package uk.ac.mmu.game.domain;
 import java.util.List;
 
 /**
- * Decorator that enforces "must land exactly on END", otherwise
- * the turn is forfeit and the player remains in place.
+ * Variation: player must land exactly on END to win.
+ *
+ * <p>If a roll would overshoot END, the player forfeits and remains in place.
  */
-public final class ExactEndDecorator implements Rules {
+public class ExactEndDecorator implements Rules {
 
     private final Rules inner;
 
     public ExactEndDecorator(Rules inner) {
+        if (inner == null) {
+            throw new IllegalArgumentException("inner rules are required");
+        }
         this.inner = inner;
     }
 
     @Override
-    public MoveResult apply(Board board, Player p, int roll, List<Player> all) {
+    public MoveResult apply(Board board, Player player, int roll, List<Player> allPlayers) {
         int end = board.endProgress();
-        int from = p.getProgress();
-        int to = from + roll;
-        if (to > end) {
+
+        int from = player.getProgress();
+        int proposedTo = from + roll;
+
+        if (proposedTo > end) {
+            // Forfeit on overshoot: stay where you are.
             return new MoveResult(
-                    p.getName(),
+                    player.getName(),
                     roll,
                     from,
                     from,
@@ -33,6 +40,7 @@ public final class ExactEndDecorator implements Rules {
                     null
             );
         }
-        return inner.apply(board, p, roll, all);
+
+        return inner.apply(board, player, roll, allPlayers);
     }
 }

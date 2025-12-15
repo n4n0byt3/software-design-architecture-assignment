@@ -7,48 +7,42 @@ import java.util.Optional;
 /**
  * Core domain object representing a single game session.
  *
- * Acts as the Subject in the Observer pattern (Week 4):
- * - Publishes state change events to {@link GameStateObserver}s
- * - Publishes turn events to {@link PlayerTurnObserver}s
- * - Publishes completion events to {@link GameFinishedObserver}s
+ * <p>Patterns used:
+ * <ul>
+ *   <li>Strategy (DiceShaker, Rules)</li>
+ *   <li>Decorator (ExactEndDecorator, ForfeitOnHitDecorator, RecordingDiceShaker)</li>
+ *   <li>State (ReadyState, InPlayState, GameOverState)</li>
+ *   <li>Observer (GameObserver interfaces)</li>
+ * </ul>
  *
- * Uses:
- * - Strategy (DiceShaker, Rules)
- * - Decorator (ExactEndDecorator, ForfeitOnHitDecorator)
- * - State (ReadyState, InPlayState, GameOverState)
- * - Observer (GameObserver interfaces).
+ * <p>Clean Architecture note:
+ * this class has no dependencies on Spring, file I/O, console I/O etc.
  */
-public final class Game {
+public class Game {
 
     private final Board board;
     private final TurnOrder turnOrder;
     private final Rules rules;
     private final DiceShaker dice;
-    private final List<MoveResult> timeline = new ArrayList<>();
 
-    // lifecycle state
+    private final List<MoveResult> timeline = new ArrayList<>();
     private GameState state = new ReadyState();
 
-    // observers
     private final List<GameStateObserver> stateObservers = new ArrayList<>();
     private final List<PlayerTurnObserver> turnObservers = new ArrayList<>();
     private final List<GameFinishedObserver> finishedObservers = new ArrayList<>();
 
     public Game(Board board, List<Player> players, Rules rules, DiceShaker dice) {
         if (board == null) throw new IllegalArgumentException("board is required");
-        if (players == null || players.isEmpty()) {
-            throw new IllegalArgumentException("at least one player is required");
-        }
+        if (players == null || players.isEmpty()) throw new IllegalArgumentException("at least one player is required");
         if (rules == null) throw new IllegalArgumentException("rules are required");
-        if (dice == null) throw new IllegalArgumentException("dice are required");
+        if (dice == null) throw new IllegalArgumentException("dice is required");
 
         this.board = board;
         this.turnOrder = new TurnOrder(players);
         this.rules = rules;
         this.dice = dice;
     }
-
-    // Accessors
 
     public Board getBoard() {
         return board;
@@ -70,70 +64,36 @@ public final class Game {
         return dice;
     }
 
+    // Package-private for tests (GameLifecycleTest).
     GameState getState() {
         return state;
     }
 
-    // Observer registration
-
-    public void addStateObserver(GameStateObserver observer) {
-        if (observer != null) {
-            stateObservers.add(observer);
-        }
-    }
-
-    public void addTurnObserver(PlayerTurnObserver observer) {
-        if (observer != null) {
-            turnObservers.add(observer);
-        }
-    }
-
-    public void addFinishedObserver(GameFinishedObserver observer) {
-        if (observer != null) {
-            finishedObservers.add(observer);
-        }
-    }
-
     public void addObserver(GameObserver observer) {
-        if (observer == null) {
-            return;
-        }
+        if (observer == null) return;
         addStateObserver(observer);
         addTurnObserver(observer);
         addFinishedObserver(observer);
     }
 
-    // NEW: observer removal (typical Week-4 pattern)
-
-    public void removeStateObserver(GameStateObserver observer) {
-        stateObservers.remove(observer);
+    public void addStateObserver(GameStateObserver observer) {
+        if (observer != null) stateObservers.add(observer);
     }
 
-    public void removeTurnObserver(PlayerTurnObserver observer) {
-        turnObservers.remove(observer);
+    public void addTurnObserver(PlayerTurnObserver observer) {
+        if (observer != null) turnObservers.add(observer);
     }
 
-    public void removeFinishedObserver(GameFinishedObserver observer) {
-        finishedObservers.remove(observer);
+    public void addFinishedObserver(GameFinishedObserver observer) {
+        if (observer != null) finishedObservers.add(observer);
     }
-
-    public void removeObserver(GameObserver observer) {
-        if (observer == null) {
-            return;
-        }
-        removeStateObserver(observer);
-        removeTurnObserver(observer);
-        removeFinishedObserver(observer);
-    }
-
-    // State management
 
     public void switchTo(GameState next) {
-        if (next == null) {
-            throw new IllegalArgumentException("next state is required");
-        }
+        if (next == null) throw new IllegalArgumentException("next state is required");
+
         String from = state.name();
         String to = next.name();
+
         this.state = next;
         next.enter(this);
 
@@ -141,8 +101,6 @@ public final class Game {
             obs.onStateChanged(this, from, to);
         }
     }
-
-    // Gameplay
 
     public MoveResult playTurn() {
         return state.playTurn(this);
@@ -153,24 +111,18 @@ public final class Game {
     }
 
     public Optional<Player> winner() {
-        return turnOrder.all().stream()
-                .filter(p -> p.isAtEnd(board))
-                .findFirst();
+        return turnOrder.all().stream().filter(p -> p.isAtEnd(board)).findFirst();
     }
 
     public List<MoveResult> timeline() {
         return List.copyOf(timeline);
     }
 
-    public void record(MoveResult mr) {
-        if (mr == null) {
-            throw new IllegalArgumentException("move result is required");
-        }
-        timeline.add(mr);
-        checkInvariants();
+    public void record(MoveResult result) {
+        if (result == null) throw new IllegalArgumentException("move result is required");
+        timeline.add(result);
+        validateInvariants();
     }
-
-    // Observer notifications
 
     public void notifyTurnPlayed(Player current, MoveResult result) {
         for (PlayerTurnObserver obs : turnObservers) {
@@ -179,9 +131,7 @@ public final class Game {
     }
 
     public void notifyGameFinished(Player winner) {
-        int totalTurns = turnOrder.all().stream()
-                .mapToInt(Player::getTurnsTaken)
-                .sum();
+        int totalTurns = turnOrder.all().stream().mapToInt(Player::getTurnsTaken).sum();
         int winnerTurns = (winner != null) ? winner.getTurnsTaken() : 0;
 
         for (GameFinishedObserver obs : finishedObservers) {
@@ -189,16 +139,12 @@ public final class Game {
         }
     }
 
-    // Invariants
-
-    private void checkInvariants() {
+    private void validateInvariants() {
         int end = board.endProgress();
         for (Player p : turnOrder.all()) {
             int prog = p.getProgress();
             if (prog < 0 || prog > end) {
-                throw new IllegalStateException(
-                        "Player progress out of range: " + p + " (end=" + end + ")"
-                );
+                throw new IllegalStateException("Player progress out of range: " + p + " (end=" + end + ")");
             }
         }
     }

@@ -6,48 +6,54 @@ import uk.ac.mmu.game.domain.MoveResult;
 import java.util.UUID;
 
 /**
- * Use case: replay a previously-saved game from its snapshot.
+ * Use case: replay a previously saved game.
+ *
+ * Snapshot approach:
+ * - load config + sequence of rolls
+ * - rebuild a deterministic game using FixedSeqShaker
+ * - run it through the normal game engine to reproduce the output
  */
-public final class ReplayGameUseCase {
+public class ReplayGameUseCase {
 
-    private final GameRepository repo;
+    private final GameSaveRepository repository;
     private final GameFactory factory;
-    private final OutputPort out;
-    private final GameMediator mediator;
+    private final GameOutputPort output;
+    private final GameEventMediator mediator;
 
-    public ReplayGameUseCase(GameRepository repo,
+    public ReplayGameUseCase(GameSaveRepository repository,
                              GameFactory factory,
-                             OutputPort out,
-                             GameMediator mediator) {
-        this.repo = repo;
+                             GameOutputPort output,
+                             GameEventMediator mediator) {
+        this.repository = repository;
         this.factory = factory;
-        this.out = out;
+        this.output = output;
         this.mediator = mediator;
     }
 
     public void replay(UUID id) throws Exception {
-        GameSave s = repo.load(id);
+        GameSave save = repository.load(id);
+        Game game = factory.createFromSave(save);
 
-        Game game = factory.createFromSave(s);
-
-        game.addObserver(out);
-        out.setBoard(game.getBoard());
+        game.addObserver(output);
+        output.setBoard(game.getBoard());
 
         mediator.event("Replaying game " + id);
-        out.printConfig(String.format(
+        output.printConfig(String.format(
                 "[REPLAY %s] Board positions=%d, Tail positions=%d, Players=%d, singleDie=%s, exactEnd=%s, forfeitOnHit=%s",
-                s.id, s.mainSize, s.tailSize, s.players, s.singleDie, s.exactEnd, s.forfeitOnHit
+                save.id, save.mainSize, save.tailSize, save.players, save.singleDie, save.exactEnd, save.forfeitOnHit
         ));
 
         while (!game.isOver()) {
             game.playTurn();
         }
 
-        // show GameOver behaviour for replay as well
+        // Demonstrate GameOver behaviour (print once).
+        boolean printedGameOver = false;
         for (int i = 0; i < 2; i++) {
             MoveResult extra = game.playTurn();
-            if ("Game over".equals(extra.note())) {
-                out.printGameOver();
+            if (!printedGameOver && "Game over".equals(extra.note())) {
+                output.printGameOver();
+                printedGameOver = true;
             }
         }
 

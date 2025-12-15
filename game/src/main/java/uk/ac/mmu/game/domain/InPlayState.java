@@ -1,6 +1,9 @@
 package uk.ac.mmu.game.domain;
 
-public final class InPlayState implements GameState {
+/**
+ * In-play state: performs normal turn progression until a win condition is met.
+ */
+public class InPlayState implements GameState {
 
     @Override
     public String name() {
@@ -13,26 +16,23 @@ public final class InPlayState implements GameState {
         Player current = order.current();
 
         int roll = game.getDice().shake();
-        MoveResult res = game.getRules().apply(
-                game.getBoard(),
-                current,
-                roll,
-                game.getPlayers()
-        );
-        game.record(res);
+        MoveResult result = game.getRules().apply(game.getBoard(), current, roll, game.getPlayers());
 
-        // Lifecycle responsibility: count how many turns this player has taken.
-        current.incTurns();
+        // Count turns here so forfeits can skip counting.
+        if (!result.forfeited()) {
+            current.incTurns();
+        }
 
-        // Notify observers that a move has been played (using the updated count).
-        game.notifyTurnPlayed(current, res);
+        game.record(result);
+        game.notifyTurnPlayed(current, result);
 
-        if (res.won()) {
+        if (result.won()) {
             game.switchTo(new GameOverState());
             game.notifyGameFinished(current);
-        } else {
-            order.next();
+            return result;
         }
-        return res;
+
+        order.next();
+        return result;
     }
 }

@@ -4,15 +4,15 @@ import uk.ac.mmu.game.domain.Board;
 import uk.ac.mmu.game.domain.Game;
 import uk.ac.mmu.game.domain.MoveResult;
 import uk.ac.mmu.game.domain.Player;
-import uk.ac.mmu.game.usecase.OutputPort;
+import uk.ac.mmu.game.usecase.GameOutputPort;
 
 /**
- * Console-based presenter and observer.
+ * Console presenter + domain observer.
  *
- * Implements OutputPort, which in turn extends GameObserver.
- * All I/O is kept here (infrastructure) to satisfy Ports & Adapters.
+ * <p>Keeps all I/O in infrastructure (Ports & Adapters / Clean Architecture).
+ * Domain and usecase layers remain framework-agnostic and testable.
  */
-public class ConsoleOutputAdapter implements OutputPort {
+public class ConsoleOutputAdapter implements GameOutputPort {
 
     private Board board;
 
@@ -21,21 +21,20 @@ public class ConsoleOutputAdapter implements OutputPort {
         this.board = board;
     }
 
-    // OutputPort printing methods
-
     @Override
-    public void printTurn(MoveResult r, int turnsForPlayer, Player p) {
+    public void printTurn(MoveResult r, int turnsForPlayer, Player playerCtx) {
         System.out.printf("%s turn %d rolls %d%n", r.player(), turnsForPlayer, r.roll());
 
         if (r.hit() && r.hitVictimName() != null && r.hitVictimPos() != null) {
-            System.out.printf("%s Position %d hit! %n", r.hitVictimName(), r.hitVictimPos());
+            System.out.printf("%s Position %d hit!%n", r.hitVictimName(), r.hitVictimPos());
         }
+
         if (r.overshoot()) {
             System.out.printf("%s overshoots!%n", r.player());
         }
 
-        String fromLabel = board.labelFor(p, r.fromProgress());
-        String toLabel = board.labelFor(p, r.toProgress());
+        String fromLabel = board.labelFor(playerCtx, r.fromProgress());
+        String toLabel = board.labelFor(playerCtx, r.toProgress());
 
         if (r.fromProgress() == r.toProgress()) {
             System.out.printf("%s remains at %s%n", r.player(), toLabel);
@@ -45,8 +44,8 @@ public class ConsoleOutputAdapter implements OutputPort {
     }
 
     @Override
-    public void printWinner(String player, int totalTurns, int winnerTurns) {
-        System.out.printf("%n%s wins in %d turns!%nTotal turns %d%n", player, winnerTurns, totalTurns);
+    public void printWinner(String playerName, int totalTurns, int winnerTurns) {
+        System.out.printf("%n%s wins in %d turns!%nTotal turns %d%n", playerName, winnerTurns, totalTurns);
     }
 
     @Override
@@ -64,7 +63,7 @@ public class ConsoleOutputAdapter implements OutputPort {
         System.out.printf("Game state %s -> %s%n", from, to);
     }
 
-    // Observer callbacks (via OutputPort extends GameObserver)
+    // Observer callbacks
 
     @Override
     public void onStateChanged(Game game, String from, String to) {
@@ -78,7 +77,6 @@ public class ConsoleOutputAdapter implements OutputPort {
 
     @Override
     public void onGameFinished(Game game, Player winner, int totalTurns, int winnerTurns) {
-        String winnerName = (winner != null ? winner.getName() : "N/A");
-        printWinner(winnerName, totalTurns, winnerTurns);
+        printWinner(winner != null ? winner.getName() : "N/A", totalTurns, winnerTurns);
     }
 }

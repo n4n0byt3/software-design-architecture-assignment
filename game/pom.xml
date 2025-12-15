@@ -19,24 +19,17 @@
 	<description>Simple Frustration simulation using Clean Architecture</description>
 
 	<properties>
-		<!-- Java 25 as required by brief (21+). -->
 		<java.version>25</java.version>
 	</properties>
 
 	<dependencies>
-		<!-- Core Spring Boot (DI container, configuration, CommandLineRunner). -->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter</artifactId>
-		</dependency>
-
-		<!-- JSON serialisation for GameSave (Jackson, as per brief). -->
+		<!-- Spring Boot container + starter-json brings Jackson -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-json</artifactId>
 		</dependency>
 
-		<!-- JUnit + Spring Test for unit / integration tests. -->
+		<!-- Tests -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
