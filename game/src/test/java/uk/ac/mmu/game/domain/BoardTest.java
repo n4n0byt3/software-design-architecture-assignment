@@ -20,7 +20,7 @@ class BoardTest {
         assertEquals("Home (Position 1)", board.labelFor(red, 0));
         assertEquals("Position 2", board.labelFor(red, 1));
         assertEquals("Position 10", board.labelFor(red, 9));
-        assertEquals("Home (Position 1)", board.labelFor(red, 18 % 18)); // wrap around
+        assertEquals("Home (Position 1)", board.labelFor(red, 0));
     }
 
     @Test

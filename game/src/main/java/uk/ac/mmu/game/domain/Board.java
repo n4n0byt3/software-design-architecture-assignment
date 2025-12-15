@@ -52,7 +52,7 @@ public class Board {
     }
 
     /**
-     * Converts abstract progress into the required human-readable label.
+     * Converts abstract progress into the required label.
      */
     public String labelFor(Player player, int progress) {
         if (progress == 0) {
@@ -66,7 +66,7 @@ public class Board {
         }
 
         // Tail: progress >= mainSize
-        int tailStep = progress - mainSize + 1; // 1..tailSize
+        int tailStep = progress - mainSize + 1;
         if (tailStep == tailSize) {
             return player.getColourLetter() + tailStep + " (End)";
         }

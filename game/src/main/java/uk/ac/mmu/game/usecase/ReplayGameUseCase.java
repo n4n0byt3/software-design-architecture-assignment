@@ -47,13 +47,12 @@ public class ReplayGameUseCase {
             game.playTurn();
         }
 
-        // Demonstrate GameOver behaviour (print once).
-        boolean printedGameOver = false;
+        // Demonstrate GameOver behaviour:
+        // Print "Game over" for each extra attempt (matches appendix example style).
         for (int i = 0; i < 2; i++) {
             MoveResult extra = game.playTurn();
-            if (!printedGameOver && "Game over".equals(extra.note())) {
+            if ("Game over".equals(extra.note())) {
                 output.printGameOver();
-                printedGameOver = true;
             }
         }
 
