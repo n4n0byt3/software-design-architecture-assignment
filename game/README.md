@@ -1,482 +1,304 @@
-# Simple Frustration – Clean Architecture Simulation (Java 25)
-
-This project is a **console-based simulation** of the *Simple Frustration* board game. It is implemented in **Java 25** using **Clean Architecture (Ports & Adapters)** and a set of well-chosen **object-oriented design patterns**.
-
-The goal is to demonstrate **high-quality software design** (maintainability, testability, extensibility, clear separation of concerns) rather than to build a GUI or a “production” game.
+# Software Design & Architecture Report
 
 ---
 
-## Technology stack
+## 1. Introduction
 
-- **Language:** Java 25
-- **Framework:** Spring Boot 3.5.x (used *only* for Dependency Injection, i.e., wiring objects together)
-- **Build tool:** Maven
-- **Testing:** JUnit 5 (via `spring-boot-starter-test`)
-- **Serialisation:** Jackson (via `spring-boot-starter-json`)
+This project is a console-based simulator of a Simple Frustration board game, 
+implemented using **Clean Architecture (Ports & Adapters)** in **Java 25**, 
+alongside a range of object-oriented design patterns introduced throughout 
+the Software Design & Architecture module.
 
-> **Terminology (brief):**  
-> **Dependency Injection (DI)** means the application creates and provides objects where needed, instead of classes constructing their own dependencies internally. This reduces coupling and improves testability.
+The primary goal of the project is not simply to produce a working game, 
+but to demonstrate the ability to design **high-quality software** consistent 
+with the principles taught. As a result, the project explicitly focuses on:
 
----
+- adequate separation of concerns
+- adherence to the SOLID principles
+- justified and appropriate use of design patterns
+- testability and maintainability
+- extensibility for future changes
+- clearly enforced architectural boundaries
 
-## What the program does (runtime behaviour)
-
-When you run the program, it:
-
-1. Reads CLI flags to decide configuration (board size, players, rule variations, dice)
-2. Creates a game using a factory (builds board, players, dice, and rules)
-3. Automatically alternates turns until someone wins
-4. Prints each turn:
-   - player name
-   - turn number (counting only *non-forfeited* turns)
-   - dice roll value
-   - position before and after the move (labels match the spec)
-   - HIT / overshoot messages when relevant
-5. Prints a winner summary:
-   - winner name
-   - total turns across all players
-   - turns taken by the winner
-6. Demonstrates correct `GameOver` behaviour by attempting extra turns after the game ends (prints `"Game over"` per extra attempt)
-7. Saves the completed game for replay
-8. Supports replaying a saved game deterministically (same output)
+This document provides a critical evaluation of the architectural and design 
+decisions made, discussing the techniques employed, the rationale behind their 
+selection, and why alternative approaches were deliberately not used.
 
 ---
 
-## Build and run
+## 2. Functional Overview
 
-### Build
-```bash
-mvn clean package
-Run (default)
-mvn spring-boot:run
-Default configuration:
+The program simulates a complete *Simple Frustration* game using **console 
+output only**, as specified.
 
-Small board (main ring = 18, tail = 3)
+From a functional perspective, the system:
 
-2 players (Red, Blue)
+- sets up a board and configures the required number of players
+- automatically alternates turns between players
+- rolls either one or two dice depending on the selected game configuration
+- applies optional rule variations
+- outputs detailed turn-by-turn information to the console
+- detects a winning condition and outputs a game summary
+- persists completed games
+- supports deterministic replay of saved games
 
-Two dice (2–12)
+Execution is performed via the command line. This decision ensures that 
+architectural concerns remain clearly separated from delivery mechanisms.
 
-Basic rules only
+---
 
-CLI flags
-Flag	Description
---single	Use a single die (1–6) instead of two dice (2–12).
---exact-end	Player must land exactly on END; overshoot forfeits and player stays in place.
---forfeit-on-hit	If a move would land on another player on the main ring, the turn is forfeited and player stays in place.
---large-board	Use the large board (main ring = 36, tail = 6).
---players=<n>	Number of players (2 or 4). If --large-board and <n> < 4, defaults to 4.
---list-saves	List all saved games with configuration summary.
---replay=<uuid>	Replay a saved game by its id.
+## 3. Architectural Approach
 
-Example commands
-mvn spring-boot:run
-mvn spring-boot:run -- --single --exact-end
-mvn spring-boot:run -- --exact-end --forfeit-on-hit
-mvn spring-boot:run -- --large-board --players=4 --single
-mvn spring-boot:run -- --list-saves
-mvn spring-boot:run -- --replay=<uuid>
-Features implemented (and how they map to the specification)
-1) Basic game (core functionality)
-Automatic alternating turns
+### 3.1 Clean Architecture (Ports & Adapters)
 
-Dice roll each turn
+The system is structured using **Clean Architecture**, also known as 
+**Ports & Adapters** or **Hexagonal Architecture**. This architectural style 
+was selected to enforce a strict separation between business logic and 
+external concerns, directly aligning with module learning objectives.
 
-Player movement around main ring then into a tail
+The project is organised into three primary layers:
 
-Correct labels:
+- **Domain layer** – contains all business logic and game rules
+- **Use Case layer** – coordinates application behaviour and workflows
+- **Infrastructure layer** – manages input/output, persistence, configuration, and frameworks
 
-Home (Position X)
+In Clean Architecture, **dependencies must always point inwards**, a rule 
+that is strictly maintained in this project:
 
-Position Y
+- the domain layer has no knowledge of Spring, files, JSON, or the console
+- use cases depend only on domain abstractions
+- infrastructure depends on domain and use case interfaces
 
-Tail Position R1
+This approach improves testability, prevents framework concerns from leaking 
+into core logic, and allows the system to be extended (for example, 
+with a graphical or networked interface) without modifying the domain layer.
 
-R3 (End) / R6 (End) depending on board size
+#### Why Clean Architecture instead of MVC?
 
-End-of-game output includes winner and turn counts
+Although Model–View–Controller (MVC) is a commonly taught architectural 
+pattern, it was intentionally not used. MVC typically assumes a user-driven 
+interface (such as a GUI or web application) and often results in controllers 
+accumulating excessive responsibility. This can lead to *fat controllers* 
+and *anemic domain models*, both of which were discussed as architectural 
+smells during the module.
 
-2) Functional variations
-All required variations are implemented and can be combined (e.g., --exact-end --forfeit-on-hit --single).
+Clean Architecture, by contrast, promotes a **rich and expressive domain model**,
+where behaviour exists alongside data rather than being driven externally. 
+This makes it more suitable for rule-heavy, logic-centric systems such as a 
+board game simulation.
 
-Single die (--single)
+---
 
-Exact end required (--exact-end)
+## 4. Architectural Overview (UML Component Diagram)
 
-Forfeit on HIT (--forfeit-on-hit)
+The UML-style component diagram below illustrates the system’s high-level 
+structure and permitted dependency directions:
 
-3) Advanced features
-Large board + 4 players (--large-board --players=4)
-
-Explicit game lifecycle states (Ready → InPlay → GameOver)
-
-Save & replay using recorded dice roll sequences
-
-Comprehensive unit testing
-
-Architecture: Clean Architecture (Ports & Adapters)
-What Clean Architecture is (short explanation)
-Clean Architecture is a way of organising code so that:
-
-Business logic (game rules) is isolated from frameworks and I/O
-
-Dependencies point inwards (outer layers depend on inner layers, not the other way around)
-
-You can swap UI/persistence without changing core logic
-
-Terminology (brief):
-A port is an interface (an abstraction) used by the core to communicate outward.
-An adapter is a concrete implementation of that interface (e.g., console output).
-
-Why Clean Architecture was chosen
-The assignment emphasises software design quality, SOLID, and patterns
-
-Console output and file storage are implementation details; game rules are “business logic”
-
-We want the game engine to be testable without Spring, without the file system, and without the console
-
-Why not MVC (and similar UI-driven architectures)
-MVC typically fits interactive applications with user-driven controllers and views. Here:
-
-There is no GUI
-
-The “controller” logic is simple CLI parsing
-
-The focus is on a rules engine that must remain stable and testable
-
-MVC would add conceptual overhead without providing real value for this problem.
-
-Clean Architecture diagram
-mermaid
-Copy code
+```mermaid
 flowchart LR
-  subgraph Domain["Domain (core business rules)"]
-    Game
-    Board
-    Player
-    Rules
-    GameState
-  end
+    subgraph Domain
+        Game
+        Board
+        Player
+        Rules
+        GameState
+        DiceShaker
+    end
 
-  subgraph UseCase["Use Case (application orchestration)"]
-    PlayGameUseCase
-    ReplayGameUseCase
-    GameFactory
-    GameOutputPort
-    GameSaveRepository
-    GameEventMediator
-  end
+    subgraph UseCase
+        PlayGameUseCase
+        ReplayGameUseCase
+        GameFactory
+        GameOutputPort
+        GameSaveRepository
+        GameEventMediator
+    end
 
-  subgraph Infrastructure["Infrastructure (I/O, frameworks, wiring)"]
-    CommandLineGameRunner
-    ConsoleOutputAdapter
-    JsonLinesGameSaveRepository
-    ConsoleGameEventMediator
-    AppConfig
-  end
+    subgraph Infrastructure
+        CommandLineGameRunner
+        ConsoleOutputAdapter
+        JsonLinesGameSaveRepository
+        ConsoleGameEventMediator
+        AppConfig
+    end
 
-  UseCase --> Domain
-  Infrastructure --> UseCase
-Diagram fallback (for non-Mermaid viewers):
+    PlayGameUseCase --> Game
+    ReplayGameUseCase --> Game
 
-Domain: core game logic (Game, Rules, Board, etc.), no I/O, no Spring
+    ConsoleOutputAdapter -.implements.-> GameOutputPort
+    JsonLinesGameSaveRepository -.implements.-> GameSaveRepository
+    ConsoleGameEventMediator -.implements.-> GameEventMediator
+```
 
-Use Case: coordinates gameplay and replay using domain classes and abstract interfaces (ports)
+This diagram visually reinforces the Dependency Inversion Principle, 
+demonstrating that infrastructure components depend on abstractions rather 
+than concrete implementations.
 
-Infrastructure: CLI parsing, console printing, JSON file persistence, Spring configuration
-Dependencies flow inward: Infrastructure → UseCase → Domain.
+5. Domain Model Design
+   5.1 Rich Domain Model
 
-Domain model design (board + movement)
-Abstract “progress” model
-Players track a single integer called progress:
+The domain layer contains the core elements of the game, including Game, 
+Board, Player, MoveResult, rule abstractions, dice abstractions, 
+and explicit game state logic.
 
-0 = Home
+The domain model is intentionally not anemic. Behaviour resides within the 
+classes that own the relevant data, improving cohesion and readability. For example:
 
-1..mainSize-1 = movement on main ring
+turn progression, state transitions, and invariant enforcement are handled by Game
 
-mainSize..endProgress = tail movement
+Board encapsulates position mapping, wrap-around logic, and label generation
 
-endProgress = mainSize + tailSize - 1
+Player manages progress and turn counting
 
-This allows the board logic to be expressed cleanly without creating dozens of “square” objects.
+This design reflects lecture guidance on encapsulation and high cohesion, 
+ensuring responsibilities are clearly defined and logically grouped.
 
-Why this design
-Pros
+6. Design Patterns and Their Justification
 
-Simple and efficient representation
+   6.1 Strategy Pattern – Dice Behaviour
 
-Works for both small and large boards
+The Strategy pattern is used to model dice behaviour via the DiceShaker 
+interface and its concrete implementations (RandomSingleDiceShaker, 
+RandomDoubleDiceShaker, and FixedSeqShaker). This allows dice behaviour to 
+vary independently of the rest of the game logic.
 
-Easy to test boundaries (home, ring, tail, end)
+Dice configurations (single or double) can be selected at runtime, while 
+deterministic dice sequences can be injected for testing and replay. An 
+alternative approach using conditional logic (e.g. if (singleDie)) was 
+rejected, as it would violate the Open/Closed Principle and lead to rigid, 
+less maintainable code. Inheritance alone was also insufficient, as it does 
+not support flexible runtime substitution as cleanly as Strategy combined with 
+composition.
 
-Cons / trade-off
+6.2 Decorator Pattern – Rule Variations
 
-Not as visually “board-like” as modelling each square as an object
-(but unnecessary for console output and would increase complexity)
+The Decorator pattern is used to implement rule variations such as exact end
+and forfeit on hit. Each variation wraps an existing Rules implementation and 
+enhances its behaviour without modifying it.
 
-Strategy pattern: Dice behaviour
-What it is (brief)
-The Strategy pattern allows you to swap an algorithm at runtime by programming to an interface.
+This approach allows multiple rule variations to be freely combined while 
+preserving a single, consistent rules interface. It also avoids
+the unmanageable increase in the number of subclasses that would be 
+required by an inheritance-based approach. Boolean flags were deliberately 
+avoided, as they would introduce complex conditional logic and violate both 
+the Single Responsibility Principle and Open/Closed Principle.
 
-How it’s implemented
-DiceShaker is the strategy interface: int shake()
+6.3 State Pattern – Game Lifecycle
 
-Implementations:
+The lifecycle of the game is modelled using the State pattern, with 
+explicit states representing Ready, InPlay, and GameOver. Each state 
+defines its own behaviour for playTurn(), preventing illegal transitions 
+and replacing scattered conditional logic with polymorphism.
 
-RandomSingleDiceShaker → returns 1..6
-
-RandomDoubleDiceShaker → sums two single rolls (2..12)
-
-FixedSeqShaker → deterministic sequence for replay/testing
-
-Why Strategy was chosen
-Dice behaviour varies independently from game rules
-
-Avoids hardcoded conditionals (if singleDie then ... else ...) across the codebase
-
-Greatly improves testability (fixed dice sequences produce deterministic game outcomes)
-
-Why not alternatives
-Conditionals: increase complexity and violate OCP (Open/Closed Principle) as you add more dice types
-
-Inheritance inside Game: would couple Game to dice details and reduce flexibility
-
-Decorator pattern: Rule variations
-What it is (brief)
-The Decorator pattern wraps an object to add behaviour without modifying the original class.
-
-How it’s implemented
-Rules is an interface representing “how moves are applied”
-
-BasicRules implements the core behaviour
-
-Variations wrap Rules:
-
-ExactEndDecorator blocks overshoot and returns a “forfeit” result
-
-ForfeitOnHitDecorator blocks moves that would cause a HIT
-
-Decorators are composed in GameFactory:
-
-start with new BasicRules()
-
-optionally wrap with ExactEndDecorator
-
-optionally wrap with ForfeitOnHitDecorator
-
-Why Decorator was chosen
-Variations must be combinable without new subclasses for each combination
-
-It keeps the base rules stable and readable
-
-It is aligned with OCP: add new rule variations without modifying existing ones
-
-Why not alternatives
-Boolean flags in one big Rules class: leads to “branching complexity” (lots of if/else), harder to test and extend
-
-Inheritance (BasicRulesExactEnd, BasicRulesHit, BasicRulesExactEndHit, …): causes subclass explosion
-
-State pattern: Game lifecycle
-What it is (brief)
-The State pattern encodes different “modes” of an object as separate classes rather than as if/else branches.
-
-How it’s implemented
-Game holds a GameState:
-
-ReadyState → first playTurn() transitions to InPlayState
-
-InPlayState → normal gameplay, checks for win, transitions to GameOverState
-
-GameOverState → returns a sentinel MoveResult with note "Game over"
+The UML state diagram below illustrates the lifecycle:
 
 stateDiagram-v2
-    [*] --> Ready
-    Ready --> InPlay : first playTurn()
-    InPlay --> GameOver : win condition met
-Diagram fallback:
-Ready is a startup state. The first turn moves to InPlay.
-When a player reaches END, the game enters GameOver.
-Any further playTurn() calls return "Game over".
+[*] --> Ready
+Ready --> InPlay : first turn
+InPlay --> GameOver : win condition
+GameOver --> GameOver : further turns
 
-Why State pattern was chosen
-Prevents illegal logic like “playing turns before the game starts”
 
-Avoids boolean flag combinations (e.g., started && !finished) which can become error-prone
+This design aligns with module content on managing complex lifecycle 
+behaviour safely using state objects.
 
-Makes lifecycle behaviour explicit and testable
+6.4 Observer Pattern – Output and Events
 
-Observer pattern: Output and event reporting
-What it is (brief)
-The Observer pattern lets one object notify other objects when events happen without tightly coupling them.
+The Observer pattern is used to decouple domain events from output and side 
+effects. The domain emits events such as turns being played or the game 
+finishing, while observers (for example, console output adapters) react 
+accordingly.
 
-How it’s implemented
-Domain emits events via observer interfaces:
+This ensures that:
 
-GameStateObserver
+domain logic performs no I/O
 
-PlayerTurnObserver
+output mechanisms are replaceable
 
-GameFinishedObserver
+side effects are isolated from core logic
 
-GameOutputPort extends these and acts as a “presentation port”
+This design promotes low coupling and high testability, both of which were 
+emphasised throughout the module.
 
-ConsoleOutputAdapter implements GameOutputPort and prints to the console
+6.5 Factory Pattern – Game Construction
 
-Why Observer was chosen
-Keeps domain pure (no System.out.println in core logic)
+The Factory pattern is used to centralise game creation. GameFactory is 
+responsible for assembling valid combinations of boards, players, rules, 
+and dice. This avoids duplication, simplifies use case logic, prevents 
+invalid configurations, and supports deterministic reconstruction during replay.
 
-Allows alternative presenters (e.g., file logger, GUI) without changing domain
+6.6 Singleton Pattern – Stateless Dice
 
-Enables tests to attach “silent” outputs to avoid console noise
+The Singleton pattern is used sparingly for stateless dice implementations. 
+Because these classes contain no mutable state, shared access is safe and 
+simplifies lifecycle management. This demonstrates a careful and justified
+use of Singleton without introducing the risks associated with global mutable
+state.
 
-Why not direct printing from domain
-Direct printing would violate:
+7. Persistence and Replay Design
 
-SRP (domain would manage both rules and output)
-
-DIP (domain would depend on concrete output mechanisms)
-
-Save & Replay design
-Where saves are stored
-Saved games are written to:
+Completed games are stored in an append-only file located at:
 
 <project-root>/target/saves/games.json
-in JSON Lines (NDJSON) format: one JSON object per line.
 
-Terminology (brief):
-NDJSON (JSON Lines) is a format where each line is a separate JSON object. It is easy to append to (append-only logs) and easy to stream/read incrementally.
 
-What is saved
-A GameSave stores:
+The file uses JSON Lines (NDJSON) format, with each line representing a single
+game snapshot. Each snapshot contains configuration details and the sequence
+of dice rolls.
 
-board sizes
+Replay is achieved by reconstructing a new game and re-injecting the original
+dice roll sequence. This approach avoids fragile state serialisation and 
+guarantees identical output by reusing the same game engine.
 
-player count (2 or 4)
+8. Testing Strategy
 
-enabled variations
+Testing focuses primarily on the domain and use case layers, where the 
+most complex logic resides. Domain tests validate rules, decorators, hit 
+detection, board mapping, and state transitions. Use case tests employ test 
+doubles and in-memory repositories to verify orchestration logic without 
+relying on I/O or frameworks.
 
-recorded dice roll sequence
+Infrastructure components such as Spring configuration and console 
+formatting are not extensively tested, as they contain minimal logic 
+and offer limited return on investment. This reflects pragmatic testing 
+guidance discussed during the module.
 
-Why this replay approach was chosen
-Instead of saving the entire in-memory state of the game, we save:
+9. SOLID Principles
 
-configuration + rolls
+The project consistently applies the SOLID principles:
 
-Then replay:
+Single Responsibility – each class has a clearly defined purpose
 
-rebuild a deterministic game
+Open/Closed – behaviour extended via decorators and strategies
 
-feed the exact same rolls via FixedSeqShaker
+Liskov Substitution – decorators substitute transparently for base rules
 
-Benefits
+Interface Segregation – small, purpose-driven interfaces
 
-Very small and robust storage
+Dependency Inversion – core logic depends on abstractions
 
-Replay is deterministic and uses the real game engine
+10. Evaluation and Reflection
+    Strengths
 
-Avoids bugs caused by manual playback scripting
+The system demonstrates strong architectural boundaries, high test 
+coverage of core logic, configurable rules, and deterministic replay. 
+The design closely aligns with the principles and techniques taught 
+throughout the module.
 
-Why not full state snapshots
+Limitations and Trade-offs
 
-more complex to serialize reliably
+The primary trade-off is increased architectural complexity and a larger 
+number of classes compared to a minimal implementation. This complexity was 
+intentionally accepted in order to maximise maintainability, extensibility, 
+and design clarity. In a production environment, further considerations such as
+performance optimisation, alternative persistence strategies, or additional 
+interfaces could be explored.
 
-more fragile if internal models change
+11. Conclusion
 
-less aligned with a “rules engine + deterministic input” design
-
-Turn counting and forfeits (important design detail)
-Turns are counted in InPlayState, not in Rules.
-
-Why?
-A forfeit (e.g., overshoot-forfeit or hit-forfeit) should not increment a player’s “turns taken” counter.
-
-If Rules incremented turns, decorators would have to “undo” turn counts, which is messy and error-prone.
-
-By counting turns in the game loop:
-
-rules focus only on move outcomes
-
-the orchestration layer decides whether a turn should count
-
-forfeits correctly skip counting
-
-This is a deliberate separation of responsibilities (SRP).
-
-Testing strategy
-What is tested
-Domain behaviour:
-
-Board mapping/labels
-
-Hit detection
-
-Basic rules
-
-Decorated rule behaviours
-
-State transitions and game lifecycle
-
-Use case behaviour:
-
-Play use case runs a game to completion and saves a snapshot
-
-Replay use case loads and replays deterministically
-
-Why this testing approach
-Domain logic is the “core business rules” and should have the highest confidence
-
-Use cases are tested with test doubles to isolate orchestration
-
-Console printing is treated as an adapter concern (not business logic)
-
-What is intentionally not tested
-Exact console formatting (presentation detail)
-
-Spring wiring beyond a context smoke test
-
-This matches industry practice: test behaviour and invariants rather than framework internals.
-
-Design patterns used (summary)
-Pattern	Where	Why it improves quality
-Strategy	DiceShaker	Swappable dice behaviour, clean runtime configuration, testability
-Decorator	ExactEndDecorator, ForfeitOnHitDecorator	Combinable variations, avoids branching complexity, OCP
-State	ReadyState, InPlayState, GameOverState	Eliminates illegal lifecycle states, clearer control flow
-Observer	GameOutputPort + observers	Keeps domain free of I/O, replaceable output, DIP
-Factory	GameFactory	Centralises construction logic, avoids duplicate wiring logic
-Singleton	Random dice	Reuse stateless strategies, consistent API
-
-SOLID principles (with brief explanation)
-SRP (Single Responsibility Principle): each class has one reason to change
-(e.g., rules compute moves; output prints; repository persists)
-
-OCP (Open/Closed Principle): behaviour extended via decorators/strategies rather than editing core classes
-(add a new rule decorator without changing BasicRules)
-
-LSP (Liskov Substitution Principle): decorators still behave as valid Rules implementations
-(they can replace any other Rules wherever a Rules is expected)
-
-ISP (Interface Segregation Principle): ports are focused interfaces rather than one “god interface”
-(output and persistence are separate concerns)
-
-DIP (Dependency Inversion Principle): use cases depend on abstractions (ports), not concrete implementations
-(PlayGameUseCase depends on GameSaveRepository, not the JSON file class)
-
-Critical evaluation & trade-offs
-What this design does well
-Strong separation between domain logic and I/O
-
-Variations implemented in a clean, composable way
-Deterministic replay using recorded inputs
-High testability with minimal mocking complexity
-
-Trade-offs accepted
-More classes than a quick procedural solution
-
-Slightly higher upfront conceptual complexity
-
-These trade-offs are justified because the assessment explicitly rewards:
-
-SOLID
-patterns
-architectural conformance
-well-justified design decisions
+This project demonstrates a holistic and critically justified application of 
+object-oriented design principles, architectural patterns, and testing 
+strategies taught throughout the Software Design & Architecture module. 
+The final system is fully functional, extensible, testable, and 
+architecturally sound, with all design decisions being intentional, 
+ justified, and aligned with best practice.
