@@ -33,15 +33,15 @@ deliberately not used.
 
 ## 2. Functional Overview
 
-The system simulates a complete game of Frustration using **only console output.**
+The system simulates a complete game of Frustration using **console output.**
 
-Functionally, the system:
+Functionally, the system does the following:
 
-- configures a board and an appropriate number of players
+- configures a board and an appropriate number of players depending on the variation of the game
 - automatically alternates turns between players
 - rolls either one or two dice depending on the selected configuration
-- applies optional rule variations
-- outputs detailed turn-by-turn information to the console
+- applies optional rule variations through CLI args
+- outputs the relevant messages/information to the console
 - detects a winning condition and outputs a summary
 - stores completed games
 - supports deterministic replay of saved games
@@ -61,7 +61,7 @@ Functionally, the system:
 Because Spring Boot and other dependencies are provided by **Maven**, 
 the project must be built before execution.
 
-To build the project, run the following command from the project root 
+Building the project is done by running the following command from the project root 
 (where the `pom.xml` is located):
 
 ```
@@ -87,16 +87,16 @@ use-case layers.
 Board Configuration
 Flag: --large-board 
 
-Description: Uses the large board configuration (36 main positions, 
-6 tail positions). If not included, the default small board 
-(18 main positions, 3 tail positions) is used.
+Description: Uses the large board variation (36 main positions, 
+6 tail positions). The default board
+(18 main positions, 3 tail positions) is used if it is not included.
 ---
 Player Configuration 
 Flag: --players=N 
 
 Description: Sets the number of players (2 or 4). 
-If --large-board is specified and fewer than 4 players are provided, 
-the system will automatically enforce 4 players to match the game rules.
+If the --large-board flag is included and fewer than 4 players are provided, 
+the system will automatically use 4 players to match the game rules.
 ---
 Dice Configuration
 Flag: --single	
@@ -107,13 +107,11 @@ configuration.
 Rule Variations
 Flag: --exact-end 
 
-Description: Enables the Exact End rule variation 
-(players must land exactly on the final square to win).
+Description: players must land exactly on the final square to win.
 
 Flag --forfeit-on-hit
 
-Description: Enables the Forfeit on Hit rule variation 
-(landing on an occupied main-ring square forfeits the move).
+Description: landing on an occupied main-ring square forfeits the move.
 
 ---
 Save and Replay Features
@@ -133,13 +131,14 @@ Saved games are stored in an append-only JSON Lines (NDJSON) file located at:
 ```
 <project-root>/target/saves/games.json
 ```
-Each entry in the json file contains the game configuration and the exact 
-sequence of dice rolls, this allows the ability to replay deterministically
-without having to serialise internal domain state.
+
+Within the json file we store the game configuration with the exact sequence of 
+dice rolls, allowing the ability to deterministically replay games without having to 
+serialise internal domain state.
 
 Example Commands:
 
-Play a default game (small board, 2 players, double dice):
+To play a standard game (small board, 2 players, double dice):
 ```java -jar target/game-*.jar```
 
 Play a large-board game with 4 players, single die, and all rule variations:
@@ -153,21 +152,16 @@ Replay a saved game:
 
 Architectural Note:
 
-All command-line parsing, validation, and routing logic lies within the
+All the command-line parsing, validation, and routing logic is housed in the
 infrastructure layer. Parsed configuration values are passed into use cases
 (PlayGameUseCase, ReplayGameUseCase) as primitive values, preserving
 Clean Architecture dependency rules and ensuring the domain remains 
 completely framework-agnostic.
 
-
-This design reflects best practice by keeping delivery mechanisms
-replaceable without requiring changes to the core business logic.
+This design is in line with best practices, we do this by keeping delivery 
+mechanisms replaceable without requiring any changes to the core business logic.
 
 ## 4. Variations and Advanced Features
-
-There were also variations/advanced features that were implemented, each with a 
-design choice chosen intentionally to support extensibility and maintainability,
-which adheres to the open for extension principle of the SOLID principles:
 
 - **Rule variations**
     - Exact End rule
@@ -183,10 +177,7 @@ The variations are implemented using different structural design patterns, for
 example the **Decorator** design pattern, allowing behaviour to be added to an 
 object at runtime by wrapping it inside another object that has the same interface.
 This enables features to be combined freely, without the usage of conditional
-logic or an excess amount of subclasses. Because of this, the codebase remains 
-open for extension, while simultaneously avoiding duplication and guaranteeing 
-long-term maintainability. 
-
+logic or an excess amount of subclasses.
 
 ---
 
@@ -194,25 +185,19 @@ long-term maintainability.
 
 ### 5.1 Clean Architecture (Ports & Adapters)
 
-The system is structured using **Clean Architecture**, also referred to as 
-**Ports & Adapters** or **Hexagonal Architecture**. This architectural style 
-was selected to enforce a strict separation between core business logic and 
-external concerns, directly aligning with module learning objectives.
+The codebase is structured using **Clean Architecture**, which can
+also be known as **Ports and Adapters**. This design structure was selected because of its
+strict separation between core business logic and external concerns.
 
-The codebase is created and structured using **Clean Architecture**, also referred
-to as **Ports and Adapters**. This design structure was selected due to its strict 
-separation between core business logic and external concerns, fitting the brief
-like a glove.
+The project is organised into three layers:
 
-The project is organised into three primary layers:
-
-- **Domain layer** – contains all business logic and game rules
+- **Domain layer** – holds all the business logic and game rules
 - **Use Case layer** – coordinates application behaviour and workflows
 - **Infrastructure layer** – manages input/output, persistence, configuration, 
 and frameworks
 
-An essential rule of **Clean Architecture** is that **dependencies must always point
-inwards**. Here is how we have enforced this:
+One integral part of the **Clean Architecture** structure is that **dependencies must always point
+inwards**. Here is how it has been done:
 
 - the domain layer has no knowledge of Spring, files, JSON, or console output
 - use cases depend only on domain abstractions
@@ -221,7 +206,7 @@ inwards**. Here is how we have enforced this:
 By enforcing this, we can ensure that the domain remains independent of a framework,
 is testable in isolation and is also resilient to changes in delivery mechanisms.
 
-#### Why Clean Architecture instead of MVC?
+#### Clean Architecture vs MVC
 
 Model–View–Controller (MVC) was deliberately not used. MVC assumes a user-driven 
 interface and often results in controllers accumulating excessive responsibility. 
@@ -234,22 +219,21 @@ and has risks of allowing controllers to build up into large files and taking on
 excess responsibility, leading to the difficulty of maintaining the code when other 
 developers begin to work on the codebase. 
 
-Moreover, MVC can also lead to *anemic domain models*, meaning important behaviour
-from the domain classes can get pushed out into controllers or views, leaving the 
-domain classes acting as data containers instead of actually containing the logic
-that actually operates on that data. Making the code less cohesive and unnecessarily
-harder to understand.
+Moreover, MVC can lead to what’s called **anemic domain models**. This happens when
+the important logic gets pulled out of the main classes and ends up scattered in 
+controllers or views. Leaving domain classes holding data, instead of actually doing
+anything useful, which makes the code less cohesive and harder to follow.
 
-Clean Architecture, by contrast, promotes a **rich and expressive domain model**, 
-where behaviour exists alongside data. This makes it significantly more appropriate
-for a rule-heavy, logic-centric system such as a board game simulation.
+With Clean Architecture, all the important behaviour lives alongside the data in the
+same classes. That’s a much better fit for a project, where there are lots of rules 
+and logic at the heart of the system.
 
 ---
 
-## 6. Architectural Overview (UML Component Diagram)
+## 6. Architectural Overview
 
-The UML-style component diagram below illustrates the high-level structure of 
-the system and the enforced dependency directions:
+I have created a component diagram below that walks through the structure of 
+the system with the dependency directions also displayed:
 
 ```mermaid
 flowchart LR
@@ -292,108 +276,168 @@ implementations.
 
 ## 7. Domain Model Design
 
-7.1 Rich Domain Model
+#### 7.1 Rich Domain Model
 
-The domain layer contains the core concepts of the game, including Game, Board, 
-Player, MoveResult, rule abstractions, dice abstractions, and explicit game state logic.
+Within the domain layer, all the important rules of the game live in classes including
+Game, Board, Player, MoveResult, rule abstractions, dice abstractions and other
+explicit game state logic.
 
-The domain model is intentionally designed to have each class keep the 
-data and the logic that operates on that data. improving cohesion and readability,
-which we touched on earlier:
+The domain model is also created with the intention of keeping the data and the logic that
+operates on that data together instead of separate, this helps to make sure we don't have
+useless classes lying around. This improves the overall **cohesion and readability** of the system.
 
-- Game manages turn progression, state transitions, and invariant enforcement
+The below approach highlights how I have enforced encapsulation and well cohesive code,
+making sure that responsibilities are clearly defined and grouped logically.
 
-- Board encapsulates position mapping, wrap-around logic, and label generation
+- The Game class takes care of things like whose turn it is, moving between different 
+phases of the game, and making sure all the rules are followed.
 
-- Player manages progress and turn counting
+- The Board class handles everything to do with player positions—figuring out where everyone is,
+managing wrap-around movement, and creating the right labels for each spot on the board.
 
-This reflects module guidance on encapsulation and high cohesion, ensuring 
-responsibilities are clearly defined and logically grouped.
+- The Player class keeps track of how far each player has progressed and keeps a count of
+how many turns they've taken.
 
 ## 8. Design Patterns in Practice
 
-This section critically evaluates each design pattern used, explaining where it 
-appears, why it was chosen, what benefits it provides, what trade-offs it 
-introduces, and why alternatives were rejected.
+This section will focus on design patterns, more specifically an evaluation
+of each design pattern used, showing and describing where they appear, why it was chosen,
+a highlight of the benefits they provide and will cover why alternative design patterns were
+deliberately not used.
 
-8.1 Strategy Pattern – Dice Behaviour
 
-Where used:
+#### 8.1 Strategy Pattern – Dice Behaviour
 
-DiceShaker interface and implementations such as RandomSingleDiceShaker, 
-RandomDoubleDiceShaker, and FixedSeqShaker.
+The **Strategy Pattern** in a nutshell:
 
-The Strategy pattern encapsulates dice-rolling behaviour behind a common interface, 
-allowing it to vary independently of the game engine.
+- defines a family of algorithms
+- will encapsulate each one
+- makes them interchangeable
+
+The algorithm can be selected at runtime without having to change the code that uses it.
+
+New dice strategies can be introduced using this design pattern, adhering to the 
+Open for extension/Closed for modification Principle
+
+#### Where used
+- Interface: `uk.ac.mmu.game.domain.DiceShaker`
+- Implementations:
+  - `RandomSingleDiceShaker`
+  - `RandomDoubleDiceShaker`
+  - `FixedSeqShaker`
 
 ```
 public interface DiceShaker {
-    int roll();
+    int shake();
 }
 ```
 
-Why used:
-Dice behaviour changes independently of the game rules. Strategy allows runtime 
-selection (single vs double dice) and deterministic sequences for testing and replay.
+#### Why used:
 
-Benefits:
+The ability to switch between variations, such as a single die or two dice, or even a 
+fixed sequence for replays is easily accessible using the strategy pattern, as the rest of
+the game code remains the same.
 
-- removes conditional logic from the game loop
+#### Benefits:
 
-- supports Open/Closed Principle
+- removes conditional logic that can be messy from the game loop
 
-- enables deterministic replay
+- supports the Open/Closed Principle
 
-Trade-offs:
+- Makes it possible to replay games exactly as they happened, needed for testing or demos
+
+#### Trade-offs:
 
 - introduces additional abstraction layers
 
-- Why alternatives were rejected:
+#### Why alternatives were rejected:
 
-- conditional logic (if (singleDie)) violates OCP
+- conditional logic violates the **Open/Closed Principle**
 
-- inheritance-based game variants duplicate logic and scale poorly
+- inheritance-based game variants can **scale poorly** and **duplicates logic**
 
-8.2 Decorator Pattern – Rule Variations
+#### 8.2 Decorator Pattern – Rule Variations
 
-Where used:
+The Decorator approach makes it easy to mix and match different rule variations by
+stacking up as many decorators as you need, allowing everything to still work
+through a single, consistent rules interface.
 
-Rules interface with decorators such as ExactEndDecorator and ForfeitOnHitDecorator.
+#### Where used
 
-The Decorator pattern allows rule behaviour to be extended without modifying 
-existing code.
+- **Interface:** `uk.ac.mmu.game.domain.Rules`
+- **Concrete base implementation:**
+  - `BasicRules`
+- **Decorator implementations:**
+  - `ExactEndDecorator`
+  - `ForfeitOnHitDecorator`
+- **Composition location:**
+  - `uk.ac.mmu.game.usecase.GameFactory` (rules are wrapped conditionally at creation time)
 
-Why used:
+```java
+public interface Rules {
+  MoveResult apply(Board board, Player current, int roll, List<Player> allPlayers);
+}
+```
 
-Rule variations must be composable. Decorators allow multiple variations to be 
-applied simultaneously while preserving a single rules interface.
+#### Why used:
 
-Benefits:
+Decorators give the ability to add multiple rules to be added at the same time
+while keeping only one single rules interface.
 
-- supports free combination of rules
+#### Benefits:
 
-- avoids duplication
+- combine rules however you want
 
-- keeps rules closed for modification
+- there is no code or logic duplication
 
-Trade-offs:
+- keeps rules closed for modification, once again adhering to the **Open for extension,
+closed for modification** principle
 
-- increased indirection
+#### Trade-offs:
 
-Why alternatives were rejected:
+- increased indirection as behaviour becomes layered through multiple decorators
+
+#### Why alternatives were rejected:
 
 - boolean flags introduce complex conditional logic
 
 - inheritance leads to an unmanageable proliferation of subclasses
 
-8.3 State Pattern – Game Lifecycle
+#### 8.3 State Pattern – Game Lifecycle
 
-Where used:
+The State pattern allows an object to alter its behaviour when its internal state changes. 
+Each state is represented by a separate class, and behaviour is delegated to the current 
+state.
 
-GameState interface with Ready, InPlay, and GameOver states.
+The state pattern gives a class the ability to alter
+its behaviour depending on what the internal state is. each state will have its
+own class responsible for a certain variation of behaviour, the main class hands the work
+to whichever class is linked to the current internal state.
 
-The State pattern models the game lifecycle explicitly.
+#### Where used
 
+- **Interface:** `uk.ac.mmu.game.domain.GameState`
+- **Implementations:**
+  - `ReadyState`
+  - `InPlayState`
+  - `GameOverState`
+- **Context:**
+  - `uk.ac.mmu.game.domain.Game` (delegates turn execution to the active state)
+
+```java
+public interface GameState {
+
+    String name();
+
+    default void enter(Game game) {
+        // Optional lifecycle hook
+    }
+
+    MoveResult playTurn(Game game);
+}
+```
+
+the below diagram demonstrates the flow of states
 ```
 stateDiagram-v2
     [*] --> Ready
@@ -402,28 +446,52 @@ stateDiagram-v2
     GameOver --> GameOver : further turns
 ```
 
-Why used:
+#### Why used:
 
-Game behaviour depends on lifecycle state. State objects prevent illegal 
-transitions and replace conditionals with polymorphism.
+By using state objects, as the game moves through its different stages (e.g. Ready to InPlay)
+we can replace conditional logic with polymorphism, following best practices.
 
-Benefits:
+#### Benefits:
 
 - prevents invalid states
 
 - improves correctness and clarity
 
-Trade-offs:
+#### Trade-offs:
 
 - additional classes
 
-8.4 Observer Pattern – Output and Events
-Where used:
-GameObserver, GameEventMediator, and ConsoleOutputAdapter.
+#### 8.4 Observer Pattern – Output and Events
 
-The Observer pattern decouples domain events from output and side effects.
+The Factory Pattern makes sure complicated objects are always built the right way 
+every time by putting all the creation details in one place. 
+Making it much easier to find and make changes.
 
-Benefits:
+#### Where used
+
+- **Observer interfaces (domain layer):**
+  - `uk.ac.mmu.game.domain.GameObserver`
+  - `uk.ac.mmu.game.domain.GameStateObserver`
+  - `uk.ac.mmu.game.domain.PlayerTurnObserver`
+  - `uk.ac.mmu.game.domain.GameFinishedObserver`
+
+- **Subject (event source):**
+  - `uk.ac.mmu.game.domain.Game`
+
+- **Concrete observer implementations (infrastructure layer):**
+  - `uk.ac.mmu.game.infrastructure.ConsoleOutputAdapter`
+
+- **Attachment of observers:**
+  - `uk.ac.mmu.game.usecase.PlayGameUseCase`
+  - `uk.ac.mmu.game.usecase.ReplayGameUseCase`
+
+```java
+public interface GameObserver
+        extends GameStateObserver, PlayerTurnObserver, GameFinishedObserver {
+}
+```
+
+#### Benefits:
 
 - domain logic performs no I/O
 
@@ -431,20 +499,58 @@ Benefits:
 
 - supports testability
 
-Why alternatives were rejected:
+#### Why alternatives were rejected:
 
-- Direct console output from the domain violates Clean Architecture and Dependency 
-Inversion.
+Direct console output from the domain violates Clean Architecture and Dependency 
+Inversion. Ensuring dependencies flow from infrastructure to domain abstractions, 
+rather than the domain depending on concrete output mechanisms.
 
-8.5 Factory Pattern – Game Construction
+#### 8.5 Factory Pattern – Game Construction
 
-Where used:
+The **Factory Pattern** ensures complex objects are constructed correctly and consistently
+through the centralisation of object creation logic, making it easy to locate and modify
 
-GameFactory.
+#### Where used
 
-Centralises game creation to ensure valid configurations and avoid duplication.
+- **Factory class (use case layer):**
+  - `uk.ac.mmu.game.usecase.GameFactory`
 
-Benefits:
+- **Factory methods:**
+  - `create2P(...)`
+  - `createGame(...)`
+  - `createFromSave(...)`
+
+- **Clients of the factory:**
+  - `uk.ac.mmu.game.usecase.PlayGameUseCase`
+  - `uk.ac.mmu.game.usecase.ReplayGameUseCase`
+
+```java
+public class GameFactory {
+
+    public Game createGame(int mainSize,
+                           int tailSize,
+                           int players,
+                           boolean singleDie,
+                           boolean exactEnd,
+                           boolean forfeitOnHit) {
+
+        DiceShaker baseDice = singleDie
+                ? RandomSingleDiceShaker.INSTANCE
+                : RandomDoubleDiceShaker.INSTANCE;
+
+        DiceShaker dice = new RecordingDiceShaker(baseDice);
+
+        Board board = new Board(mainSize, tailSize);
+        List<Player> playerList = buildPlayers(players);
+
+        Rules rules = buildRules(exactEnd, forfeitOnHit);
+
+        return new Game(board, playerList, rules, dice);
+    }
+}
+```
+
+#### Benefits:
 
 - prevents invalid game construction
 
@@ -452,69 +558,194 @@ Benefits:
 
 - supports deterministic replay
 
-8.6 Singleton Pattern – Stateless Dice
+#### 8.6 Singleton Pattern – Stateless Dice
 
-Where used:
+The **Singleton Pattern** ensures **only one instance** of a class exists, while also
+providing a global access point to it.
 
-Stateless dice shaker implementations.
+#### Where used
 
-Singleton is used sparingly and only where shared access is safe.
+- **Singleton implementations (domain layer):**
+  - `uk.ac.mmu.game.domain.RandomSingleDiceShaker`
+  - `uk.ac.mmu.game.domain.RandomDoubleDiceShaker`
 
-- Benefits:
+- **Access pattern:**
+  - Exposed via public static final `INSTANCE` fields
+  - Constructor made private to prevent external instantiation
 
-- reduced object creation
+```java
+public final class RandomSingleDiceShaker implements DiceShaker {
 
-- simple lifecycle management
+    public static final RandomSingleDiceShaker INSTANCE =
+            new RandomSingleDiceShaker();
 
-Trade-offs:
+    private RandomSingleDiceShaker() { }
 
-- unsuitable for mutable state
+    @Override
+    public int shake() {
+        return random.nextInt(6) + 1;
+    }
+}
+```
 
-## 9. SOLID Principles Applied
-Principle	Application
-SRP	GameFactory, dice strategies, output adapters
-OCP	Rule decorators and dice strategies
-LSP	Decorators substitute base Rules transparently
-ISP	Small, focused ports such as GameOutputPort
-DIP	Domain depends only on abstractions
+#### Benefits:#
+- In this case, Singleton is safe because the dice implementations are
+  stateless and immutable, avoiding the usual risks associated with global mutable state.
 
-These principles are applied consistently and intentionally throughout the system.
+#### Trade-offs:
 
-## 10. Persistence and Replay Design
-Completed games are stored in an append-only file located at:
+- If the code were to be extended and begin to use mutable state, it would become unsuitable.
+
+#### 9. SOLID Principles
+
+The SOLID principles gave an essential guide to follow throughout the creation of the
+system, by adhering to all aspects these principles, all the code follows the best practices. 
+
+#### 9.1 Single Responsibility Principle (SRP)
+
+This principle is all about making sure each class only has one job to prevent overloading
+classes with too much functionality, preventing SRP violations when it is reviewed and 
+guaranteeing other developers will not have a difficult time understanding your work.
+
+
+- Gamefactory does not handle any logic including gameplay, saving or output, its only role
+is to build valid game instances.
+
+- Dice behaviour lives in dedicated strategy classes like RandomSingleDiceShaker and 
+FixedSeqShaker, instead of being mixed into the game loop.
+
+- Output is handled separately by infrastructure adapters like ConsoleOutputAdapter, so
+the core business logic never has to worry about presentation. 
+
+- By giving every class a clearly defined purpose, the code is easier to read, update, 
+and test.
+
+- To change how output works or to tweak dice behaviour, you only need touch the relevant code.
+
+#### 9.2 Open/Closed Principle (OCP)
+
+This principle is all about making sure the code is easy to add to without having to 
+rewrite or mess around with code that already works. In order to achieve this I primarily
+focused on my use of design patterns.
+
+- Rule variations are plugged in using the Decorator pattern (ExactEndDecorator, 
+ForfeitOnHitDecorator), so you never have to change the core BasicRules.
+
+- Dice behaviour can be swapped out using the Strategy pattern, meaning you can add new 
+dice types without touching the Game class itself.
+
+#### 9.3 Liskov Substitution Principle (LSP)
+
+This principle guides you to create code that can swap out any implementation of an
+interface without breaking anything. To adhere to this principle I have:
+
+- All decorators (like ExactEndDecorator and ForfeitOnHitDecorator) implement the same 
+Rules interface. 
+- You can use any rules object, decorated or not, anywhere a Rules 
+instance is expected - no special handling is required.
+
+#### 9.4 Interface Segregation Principle (ISP)
+
+Rather than forcing classes to implement big interfaces that tried to encapsulate all
+functionality, I used smaller, focused interfaces. For example:
+
+- Output is managed through simple ports like GameOutputPort instead of one massive interface.
+- Observers are abstracted into targeted classes such as GameStateObserver,
+  PlayerTurnObserver and GameFinishedObserver so instead of using a large interface where you
+  won't need half the code in there, this approach keeps the system easy to work with as you
+  know which interfaces are responsible for certain things.
+
+#### 9.5 Dependency Inversion Principle (DIP)
+
+This principle flips the usual dependency direction - high-level parts of the system 
+don’t rely directly on the low-level details. Instead, both depend on abstractions. 
+In practice:
+
+- The domain layer only talks to interfaces, never to actual infrastructure code. 
+- Use cases interact with classes such as GameSaveRepository or GameOutputPort for things
+like saving and output as opposed to using concrete classes.
+- Infrastructure, including console output or file storage plugs into these abstractions, 
+not the other way around. 
+- Keeping business logic free of any framework makes it easier to test and makes code more
+maintainable
+
+#### 9.6 Summary of SOLID Application
+
+The SOLID principles work together and reinforce each other throughout the project. 
+By following them intentionally, the system ends up with:
+
+- Loose coupling between different parts
+- High cohesion within each class
+- Easy ways to extend or change behaviour without rewriting old code
+- Clear boundaries between layers
+
+All of this adds up to a design that’s robust, flexible, and in line with the best
+practices.
+
+## 10. Persistence and Replay Functionality
+
+To find completed games they are in an append-only JSON file in JSON Lines (NDJSON) format,
+containing its game configurations and dice roll sequences located at:
 
 ```
 <project-root>/target/saves/games.json
 ```
-The file uses JSON Lines (NDJSON) format, with each line representing a single game 
-snapshot containing configuration details and the dice roll sequence.
 
-Replay is achieved by reconstructing a new game and re-injecting the original dice 
-sequence, avoiding fragile state serialisation and guaranteeing identical output.
+To guarantee an identical output as the saved game, we reconstruct a new game and
+re-inject the original dice roll sequences and game configurations.
 
 ## 11. Testing Strategy
 Testing focuses on the domain and use case layers, where the most complex logic 
 resides. Domain tests cover rules, decorators, hit detection, board mapping, 
 and state transitions. Use case tests employ test doubles and in-memory repositories.
 
+Tests were written where I viewed them as most necessary, in the domain and use case
+layers as this is where the most complex logic lives. Domain tests cover rules, 
+decorators, hit detection, board mapping, and state transitions while use case tests
+use in-memory repositories and mocks. 
+
 Infrastructure components such as Spring configuration and console formatting are 
 not extensively tested due to minimal logic and low return on investment, 
 reflecting pragmatic testing guidance discussed during the module.
 
 ## 12. Evaluation and Reflection
-Strengths
-strong architectural boundaries
+Reviewing my work, I’m happy with how the project turned out, meeting both the 
+functional goals and the architectural standards set. Every design 
+choice was chosen intentionally, ensuring it aligned with my goal for that specific piece
+of code.
 
-high test coverage of core logic
+#### Strengths
 
-flexible rule and dice system
+One of the standout strengths is how clearly and strictly the system separates its 
+different layers. The domain, use-case, and infrastructure parts are always kept apart, 
+so the core business logic never gets tangled up with frameworks, input/output, or how 
+the program is delivered.
 
-deterministic replay
+Another is the high level of test coverage in the most important parts of the 
+code—the domain and use-case layers. By keeping the tricky and essential logic away
+from outside concerns, I could write tests that are reliable and predictable.
 
-Limitations and Trade-offs
-The primary trade-off is increased architectural complexity and a higher number 
-of classes compared to a minimal solution. This was intentionally accepted to 
-prioritise maintainability, extensibility, and design clarity.
+The design is also flexible. If you want to add a new rule or dice behaviour, 
+you can do it without needing to mess with any existing code. That shows the design 
+patterns and SOLID principles really paid off.
+
+And I’m especially proud of the deterministic replay feature. By recording dice 
+rolls instead of saving the whole game state, the system can play back games exactly 
+as they happened, using the same core engine. That’s great for both correctness and 
+long-term maintenance.
+
+#### Limitations/Trade-offs:
+
+Desipite the fact I ended up with significantly more classes than if I was to disregard
+many design choices, the decision was made to take design patterns and architectural
+techniques into consideration to make sure the code is easy to maintain,
+extend and test in the long run.
+
+If this were a production system, I’d also want to think about things like performance 
+tuning, different ways of saving data, or maybe adding more types of user interfaces. 
+But for this instance, I believe the trade-offs I made were the right ones.
+
+
 
 ## 13. Conclusion
 
