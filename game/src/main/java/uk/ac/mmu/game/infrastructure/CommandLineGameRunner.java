@@ -52,6 +52,14 @@ public class CommandLineGameRunner implements CommandLineRunner {
             if (playersVal != null) {
                 players = Integer.parseInt(playersVal);
             }
+
+            // Block 4-player games unless large board is selected.
+            if (players == 4 && !largeBoard) {
+                throw new IllegalArgumentException(
+                        "Invalid configuration: 4 players require the large board. Please use --large-board."
+                );
+            }
+
             // Per spec: large board implies 4 players minimum.
             if (largeBoard && players < 4) {
                 players = 4;

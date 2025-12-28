@@ -62,8 +62,8 @@ class GameLifecycleTest {
         MoveResult extra1 = game.playTurn();
         MoveResult extra2 = game.playTurn();
 
-        assertEquals("Game over", extra1.note());
-        assertEquals("Game over", extra2.note());
+        assertEquals("Game Over", extra1.note());
+        assertEquals("Game Over", extra2.note());
         assertTrue(game.isOver());
     }
 }

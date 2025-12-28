@@ -25,7 +25,7 @@ public record MoveResult(
                 false,
                 false,
                 false,
-                "Game over",
+                "Game Over",
                 null,
                 null
         );
